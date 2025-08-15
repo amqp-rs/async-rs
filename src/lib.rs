@@ -1,14 +1,10 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+#![forbid(unsafe_code)]
+#![deny(missing_docs, missing_debug_implementations)]
+#![no_std]
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+//! A collection of traits and implementations to define a common interface across async runtimes
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+extern crate alloc;
+extern crate core;
+
+pub mod executor;

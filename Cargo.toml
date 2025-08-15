@@ -1,8 +1,22 @@
 [package]
 name = "async-rs"
-version = "0.0.0"
-description = "placeholder"
-license = "MIT"
+version = "0.1.0"
 edition = "2024"
+authors = ["Marc-Antoine Perennou <Marc-Antoine@Perennou.com>"]
+description = "Async runtime abstration"
+repository = "https://github.com/amqp-rs/async-rs"
+readme = "README.md"
+documentation = "https://docs.rs/async-rs"
+keywords = ["async", "await", "futures", "executor"]
+categories = ["asynchronous", "concurrency"]
+license = "BSD-2-Clause"
+rust-version = "1.85.0"
+
+[features]
+default = []
 
 [dependencies]
+async-trait = "^0.1.89"
+
+[badges]
+maintenance = { status = "actively-developed" }

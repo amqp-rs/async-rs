@@ -8,3 +8,6 @@ extern crate alloc;
 extern crate core;
 
 pub mod executor;
+
+#[cfg(feature = "tokio")]
+pub mod tokio;

@@ -13,10 +13,17 @@ license = "BSD-2-Clause"
 rust-version = "1.85.0"
 
 [features]
-default = []
+default = ["tokio"]
+tokio = ["dep:tokio"]
 
 [dependencies]
 async-trait = "^0.1.89"
+
+[dependencies.tokio]
+version = "^1.47"
+optional = true
+default-features = false
+features = ["rt-multi-thread"]
 
 [badges]
 maintenance = { status = "actively-developed" }

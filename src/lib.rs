@@ -9,6 +9,9 @@ extern crate core;
 
 pub mod executor;
 
+#[cfg(feature = "async-global-executor")]
+pub mod async_global_executor;
+
 #[cfg(feature = "smol")]
 pub mod smol;
 

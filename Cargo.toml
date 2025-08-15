@@ -1,0 +1,8 @@
+[package]
+name = "async-rs"
+version = "0.0.0"
+description = "placeholder"
+license = "MIT"
+edition = "2024"
+
+[dependencies]

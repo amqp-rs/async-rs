@@ -16,7 +16,7 @@ rust-version = "1.85.0"
 default = ["tokio"]
 async-global-executor = ["dep:async-global-executor"]
 smol = ["dep:smol"]
-tokio = ["dep:tokio"]
+tokio = ["dep:tokio", "dep:tokio-stream"]
 
 [dependencies]
 async-trait = "^0.1.89"
@@ -37,7 +37,16 @@ optional = true
 version = "^1.47"
 optional = true
 default-features = false
-features = ["rt-multi-thread"]
+features = ["net", "rt", "rt-multi-thread", "time"]
+
+[dependencies.tokio-stream]
+version = "^0.1"
+optional = true
+
+[dependencies.tokio-util]
+version = "^0.7"
+default-features = false
+features = ["compat"]
 
 [package.metadata.docs.rs]
 all-features = true

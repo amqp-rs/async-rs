@@ -1,13 +1,19 @@
 //! tokio implementation of async runtime definition traits
 
-use crate::{Executor, Runtime, RuntimeKit, Task};
+use crate::{AsyncIOHandle, Executor, IOHandle, Reactor, Runtime, RuntimeKit, Task, sys::IO};
 use async_trait::async_trait;
+use futures_core::Stream;
 use std::{
     future::Future,
+    io,
+    net::SocketAddr,
     pin::Pin,
     task::{Context, Poll},
+    time::{Duration, Instant},
 };
-use tokio::runtime::Handle;
+use tokio::{io::unix::AsyncFd, net::TcpStream, runtime::Handle};
+use tokio_stream::{StreamExt, wrappers::IntervalStream};
+use tokio_util::compat::TokioAsyncReadCompatExt;
 
 /// Type alias for the tokio runtime
 pub type TokioRuntime = Runtime<Tokio>;
@@ -104,6 +110,156 @@ impl<T> Future for TTask<T> {
     }
 }
 
+#[async_trait]
+impl Reactor for Tokio {
+    fn register<H: IO + Send + 'static>(
+        &self,
+        socket: IOHandle<H>,
+    ) -> io::Result<impl AsyncIOHandle + Send> {
+        let _enter = self.handle().as_ref().map(|handle| handle.enter());
+        if cfg!(unix) {
+            Ok(Box::new(unix::AsyncFdWrapper(AsyncFd::new(socket)?)))
+        } else {
+            Err(io::Error::other(
+                "Registering FD on tokio reactor is only supported on unix",
+            ))
+        }
+    }
+
+    async fn sleep(&self, dur: Duration) {
+        tokio::time::sleep(dur).await;
+    }
+
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+        let _enter = self.handle().as_ref().map(|handle| handle.enter());
+        Box::new(
+            IntervalStream::new(tokio::time::interval(dur)).map(tokio::time::Instant::into_std),
+        )
+    }
+
+    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
+        // We cannot do that as EnterGuard is not Send (which makes sense)
+        // let _enter = self.handle().as_ref().map(|handle| handle.enter());
+        Ok(TcpStream::connect(addr).await?.compat())
+    }
+}
+
+#[cfg(unix)]
+mod unix {
+    use super::*;
+    use futures_io::{AsyncRead, AsyncWrite};
+    use std::io::{IoSlice, IoSliceMut, Read, Write};
+
+    pub(super) struct AsyncFdWrapper<H: IO + Send + 'static>(pub(super) AsyncFd<IOHandle<H>>);
+
+    impl<H: IO + Send + 'static> AsyncFdWrapper<H> {
+        fn read<F: FnOnce(&mut AsyncFd<IOHandle<H>>) -> io::Result<usize>>(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            f: F,
+        ) -> Option<Poll<io::Result<usize>>> {
+            Some(match self.0.poll_read_ready_mut(cx) {
+                Poll::Pending => Poll::Pending,
+                Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+                Poll::Ready(Ok(mut guard)) => match guard.try_io(f) {
+                    Ok(res) => Poll::Ready(res),
+                    Err(_) => return None,
+                },
+            })
+        }
+
+        fn write<R, F: FnOnce(&mut AsyncFd<IOHandle<H>>) -> io::Result<R>>(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            f: F,
+        ) -> Option<Poll<io::Result<R>>> {
+            Some(match self.0.poll_write_ready_mut(cx) {
+                Poll::Pending => Poll::Pending,
+                Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+                Poll::Ready(Ok(mut guard)) => match guard.try_io(f) {
+                    Ok(res) => Poll::Ready(res),
+                    Err(_) => return None,
+                },
+            })
+        }
+    }
+
+    impl<H: IO + Send + 'static> Unpin for AsyncFdWrapper<H> {}
+
+    impl<H: IO + Send + 'static> AsyncRead for AsyncFdWrapper<H> {
+        fn poll_read(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &mut [u8],
+        ) -> Poll<io::Result<usize>> {
+            loop {
+                if let Some(res) = self.as_mut().read(cx, |socket| socket.get_mut().read(buf)) {
+                    return res;
+                }
+            }
+        }
+
+        fn poll_read_vectored(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            bufs: &mut [IoSliceMut<'_>],
+        ) -> Poll<io::Result<usize>> {
+            loop {
+                if let Some(res) = self
+                    .as_mut()
+                    .read(cx, |socket| socket.get_mut().read_vectored(bufs))
+                {
+                    return res;
+                }
+            }
+        }
+    }
+
+    impl<H: IO + Send + 'static> AsyncWrite for AsyncFdWrapper<H> {
+        fn poll_write(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &[u8],
+        ) -> Poll<io::Result<usize>> {
+            loop {
+                if let Some(res) = self
+                    .as_mut()
+                    .write(cx, |socket| socket.get_mut().write(buf))
+                {
+                    return res;
+                }
+            }
+        }
+
+        fn poll_write_vectored(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            bufs: &[IoSlice<'_>],
+        ) -> Poll<io::Result<usize>> {
+            loop {
+                if let Some(res) = self
+                    .as_mut()
+                    .write(cx, |socket| socket.get_mut().write_vectored(bufs))
+                {
+                    return res;
+                }
+            }
+        }
+
+        fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+            loop {
+                if let Some(res) = self.as_mut().write(cx, |socket| socket.get_mut().flush()) {
+                    return res;
+                }
+            }
+        }
+
+        fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<futures_io::Result<()>> {
+            self.poll_flush(cx)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,11 +268,15 @@ mod tests {
     fn dyn_compat() {
         struct Test {
             _executor: Box<dyn Executor>,
+            _reactor: Box<dyn Reactor>,
+            _kit: Box<dyn RuntimeKit>,
             _task: Box<dyn Task<String>>,
         }
 
         let _ = Test {
             _executor: Box::new(Tokio::default()),
+            _reactor: Box::new(Tokio::default()),
+            _kit: Box::new(Tokio::default()),
             _task: Box::new(TTask(None)),
         };
     }

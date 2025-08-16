@@ -1,11 +1,11 @@
 //! A collection of traits to define a common interface across executors
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, fmt::Debug};
 use async_trait::async_trait;
 use core::{future::Future, ops::Deref, pin::Pin};
 
 /// A common interface for spawning futures on top of an executor
-pub trait Executor {
+pub trait Executor: Debug {
     /// Block on a future until completion
     fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T
     where
@@ -25,10 +25,9 @@ pub trait Executor {
         Self: Sized;
 }
 
-impl<E: Deref + Sync> Executor for E
+impl<E: Deref + Debug> Executor for E
 where
-    Self: Sized,
-    E::Target: Executor + Sync + Sized,
+    E::Target: Executor + Sized,
 {
     fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
         self.deref().block_on(f)

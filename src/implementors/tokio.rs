@@ -1,6 +1,6 @@
 //! tokio implementation of async runtime definition traits
 
-use crate::{Executor, Task};
+use crate::{Executor, RuntimeKit, Task};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::{
@@ -66,6 +66,8 @@ impl Executor for Tokio {
         }))
     }
 }
+
+impl RuntimeKit for Tokio {}
 
 #[async_trait(?Send)]
 impl<T> Task<T> for TTask<T> {

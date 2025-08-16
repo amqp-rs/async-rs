@@ -1,6 +1,6 @@
 //! smol implementation of async runtime definition traits
 
-use crate::{Executor, Task};
+use crate::{Executor, RuntimeKit, Task};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::{
@@ -34,6 +34,8 @@ impl Executor for Smol {
         STask(Some(smol::unblock(f)))
     }
 }
+
+impl RuntimeKit for Smol {}
 
 #[async_trait(?Send)]
 impl<T> Task<T> for STask<T> {

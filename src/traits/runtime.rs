@@ -1,4 +1,4 @@
-use crate::Executor;
+use crate::{Executor, Reactor};
 
 /// Supertrait to tag a type that implements all required components for a Runtime
-pub trait RuntimeKit: Executor {} // TODO: require Reactor
+pub trait RuntimeKit: Executor + Reactor {}

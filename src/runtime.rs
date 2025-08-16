@@ -63,7 +63,7 @@ impl<E: Executor, R: Reactor> RuntimeParts<E, R> {
     }
 }
 
-impl<E: Executor, R: Reactor> RuntimeKit for RuntimeParts<E, R> {}
+impl<E: Executor + Sync, R: Reactor + Sync> RuntimeKit for RuntimeParts<E, R> {}
 
 impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
     fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {

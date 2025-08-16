@@ -8,13 +8,18 @@ use std::{
     task::{Context, Poll},
 };
 
-/// Type alias for the async-global-executor runtime
-pub type AGERuntime = Runtime<RuntimeParts<AsyncGlobalExecutor, ()>>;
+#[cfg(feature = "async-io")]
+use crate::AsyncIO;
 
+/// Type alias for the async-global-executor runtime
+#[cfg(feature = "async-io")]
+pub type AGERuntime = Runtime<RuntimeParts<AsyncGlobalExecutor, AsyncIO>>;
+
+#[cfg(feature = "async-io")]
 impl AGERuntime {
     /// Create a new SmolRuntime
     pub fn async_global_executor() -> Self {
-        Self::new(RuntimeParts::new(AsyncGlobalExecutor))
+        Self::new(RuntimeParts::new(AsyncGlobalExecutor, AsyncIO))
     }
 }
 

@@ -1,5 +1,5 @@
-use crate::{Executor, RuntimeKit, Task};
-use std::{fmt::Debug, future::Future, marker::PhantomData, pin::Pin};
+use crate::{Executor, Reactor, RuntimeKit, Task};
+use std::{fmt::Debug, future::Future, pin::Pin};
 
 /// A full-featured Runtime implementation
 #[derive(Debug)]
@@ -42,22 +42,22 @@ impl<RK: RuntimeKit + 'static> Executor for Runtime<RK> {
 
 /// Wrapper around separate Executor and Reactor implementing RuntimeKit
 #[derive(Debug)]
-pub struct RuntimeParts<E: Executor, R: Debug /* TODO: Reactor */> {
+pub struct RuntimeParts<E: Executor, R: Reactor> {
     executor: E,
-    _reactor: PhantomData<R>,
+    _reactor: R,
 }
 
-impl<E: Executor, R: Debug> RuntimeParts<E, R> {
+impl<E: Executor, R: Reactor> RuntimeParts<E, R> {
     /// Create new RuntimeParts from separate Executor and Reactor
-    pub fn new(executor: E) -> Self {
+    pub fn new(executor: E, reactor: R) -> Self {
         Self {
             executor,
-            _reactor: PhantomData {},
+            _reactor: reactor,
         }
     }
 }
 
-impl<E: Executor, R: Debug> Executor for RuntimeParts<E, R> {
+impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
     fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
         self.executor.block_on(f)
     }
@@ -77,4 +77,4 @@ impl<E: Executor, R: Debug> Executor for RuntimeParts<E, R> {
     }
 }
 
-impl<E: Executor, R: Debug> RuntimeKit for RuntimeParts<E, R> {}
+impl<E: Executor, R: Reactor> RuntimeKit for RuntimeParts<E, R> {}

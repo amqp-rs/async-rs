@@ -1,9 +1,8 @@
 //! async-global-executor implementation of async runtime definition traits
 
 use crate::{Executor, Runtime, RuntimeParts, Task};
-use alloc::boxed::Box;
 use async_trait::async_trait;
-use core::{
+use std::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
@@ -71,7 +70,6 @@ impl<T> Future for AGETask<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::string::String;
 
     #[test]
     fn dyn_compat() {

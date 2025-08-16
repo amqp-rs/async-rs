@@ -1,6 +1,5 @@
 use crate::{Executor, RuntimeKit, Task};
-use alloc::{boxed::Box, fmt::Debug};
-use core::{future::Future, marker::PhantomData, pin::Pin};
+use std::{fmt::Debug, future::Future, marker::PhantomData, pin::Pin};
 
 /// A full-featured Runtime implementation
 #[derive(Debug)]

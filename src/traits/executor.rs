@@ -1,8 +1,7 @@
 //! A collection of traits to define a common interface across executors
 
-use alloc::{boxed::Box, fmt::Debug};
 use async_trait::async_trait;
-use core::{future::Future, ops::Deref, pin::Pin};
+use std::{fmt::Debug, future::Future, ops::Deref, pin::Pin};
 
 /// A common interface for spawning futures on top of an executor
 pub trait Executor: Debug {

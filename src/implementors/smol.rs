@@ -1,9 +1,8 @@
 //! smol implementation of async runtime definition traits
 
 use crate::{Executor, Runtime, RuntimeKit, Task};
-use alloc::boxed::Box;
 use async_trait::async_trait;
-use core::{
+use std::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
@@ -73,7 +72,6 @@ impl<T> Future for STask<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::string::String;
 
     #[test]
     fn dyn_compat() {

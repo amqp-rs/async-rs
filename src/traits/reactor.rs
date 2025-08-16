@@ -13,7 +13,7 @@ use sys::IO;
 
 /// A common interface for performing actions on a reactor
 #[async_trait]
-pub trait Reactor: fmt::Debug {
+pub trait Reactor {
     /// Register a synchronous handle, returning an asynchronous one
     fn register<H: IO + Send + 'static>(
         &self,

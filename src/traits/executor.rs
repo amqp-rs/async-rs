@@ -1,10 +1,10 @@
 //! A collection of traits to define a common interface across executors
 
 use async_trait::async_trait;
-use std::{fmt::Debug, future::Future, ops::Deref, pin::Pin};
+use std::{future::Future, ops::Deref, pin::Pin};
 
 /// A common interface for spawning futures on top of an executor
-pub trait Executor: Debug {
+pub trait Executor {
     /// Block on a future until completion
     fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T
     where
@@ -24,7 +24,7 @@ pub trait Executor: Debug {
         Self: Sized;
 }
 
-impl<E: Deref + Debug> Executor for E
+impl<E: Deref> Executor for E
 where
     E::Target: Executor + Sized,
 {

@@ -53,7 +53,7 @@ impl Tokio {
     }
 }
 
-struct TTask<T>(Option<tokio::task::JoinHandle<T>>);
+struct TTask<T: Send>(Option<tokio::task::JoinHandle<T>>);
 
 impl RuntimeKit for Tokio {}
 
@@ -90,7 +90,7 @@ impl Executor for Tokio {
 }
 
 #[async_trait(?Send)]
-impl<T> Task<T> for TTask<T> {
+impl<T: Send> Task<T> for TTask<T> {
     async fn cancel(&mut self) -> Option<T> {
         let task = self.0.take()?;
         task.abort();
@@ -98,7 +98,7 @@ impl<T> Task<T> for TTask<T> {
     }
 }
 
-impl<T> Future for TTask<T> {
+impl<T: Send> Future for TTask<T> {
     type Output = T;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

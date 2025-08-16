@@ -49,7 +49,7 @@ where
 
 /// A common interface to wait for a Task completion, let it run n the background or cancel it.
 #[async_trait(?Send)]
-pub trait Task<T>: Future<Output = T> {
+pub trait Task<T>: Future<Output = T> + Send {
     /// Cancels the task and waits for it to stop running.
     ///
     /// Returns the task's output if it was completed just before it got canceled, or None if it

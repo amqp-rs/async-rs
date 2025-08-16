@@ -29,7 +29,7 @@ impl SmolRuntime {
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Smol;
 
-struct STask<T>(Option<smol::Task<T>>);
+struct STask<T: Send>(Option<smol::Task<T>>);
 
 impl RuntimeKit for Smol {}
 
@@ -54,13 +54,13 @@ impl Executor for Smol {
 }
 
 #[async_trait(?Send)]
-impl<T> Task<T> for STask<T> {
+impl<T: Send> Task<T> for STask<T> {
     async fn cancel(&mut self) -> Option<T> {
         self.0.take()?.cancel().await
     }
 }
 
-impl<T> Drop for STask<T> {
+impl<T: Send> Drop for STask<T> {
     fn drop(&mut self) {
         if let Some(task) = self.0.take() {
             task.detach();
@@ -68,7 +68,7 @@ impl<T> Drop for STask<T> {
     }
 }
 
-impl<T> Future for STask<T> {
+impl<T: Send> Future for STask<T> {
     type Output = T;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

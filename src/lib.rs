@@ -11,7 +11,8 @@
 //!
 //! ## Example
 //!
-//!use async_rs::{Executor, Reactor, Runtime, TokioRuntime};
+//! ```rust
+//! use async_rs::{Executor, Reactor, Runtime, TokioRuntime};
 //! use std::{io, sync::Arc, time::Duration};
 //!
 //! async fn get_a(rt: Arc<TokioRuntime>) -> io::Result<u32> {
@@ -37,11 +38,7 @@
 //! async fn main() -> io::Result<()> {
 //!     tokio_main().await
 //! }
-//!
-//! #[tokio::test]
-//! async fn tokio() -> io::Result<()> {
-//!     tokio_main().await
-//! }
+//! ```
 
 mod runtime;
 pub use runtime::*;

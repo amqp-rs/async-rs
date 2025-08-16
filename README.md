@@ -50,9 +50,4 @@ async fn tokio_main() -> io::Result<()> {
 async fn main() -> io::Result<()> {
     tokio_main().await
 }
-
-#[tokio::test]
-async fn tokio() -> io::Result<()> {
-    tokio_main().await
-}
 ```

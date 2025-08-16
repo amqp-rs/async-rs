@@ -1,5 +1,5 @@
 use crate::{AsyncIOHandle, IOHandle, Reactor, sys::IO};
-use async_io::{Async, IoSafe, Timer};
+use async_io::{Async, Timer};
 use async_trait::async_trait;
 use futures_core::Stream;
 use std::{
@@ -33,10 +33,6 @@ impl Reactor for AsyncIO {
         Async::<TcpStream>::connect(addr).await
     }
 }
-
-#[allow(unsafe_code)]
-#[cfg(feature = "async-io")]
-unsafe impl<H: IO + Send + 'static> IoSafe for IOHandle<H> {}
 
 #[cfg(test)]
 mod tests {

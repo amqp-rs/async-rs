@@ -16,7 +16,7 @@ rust-version = "1.85.0"
 default = ["tokio"]
 async-global-executor = ["dep:async-global-executor"]
 async-io = ["dep:async-io"]
-smol = ["dep:smol"]
+smol = ["dep:smol", "async-io"] # async-io required for implementing IoSafe
 tokio = ["dep:tokio", "dep:tokio-stream"]
 
 [dependencies]

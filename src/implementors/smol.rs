@@ -1,11 +1,16 @@
 //! smol implementation of async runtime definition traits
 
-use crate::{Executor, Runtime, RuntimeKit, Task};
+use crate::{AsyncIOHandle, Executor, IOHandle, Reactor, Runtime, RuntimeKit, Task, sys::IO};
 use async_trait::async_trait;
+use futures_core::Stream;
+use smol::{Async, Timer};
 use std::{
     future::Future,
+    io,
+    net::{SocketAddr, TcpStream},
     pin::Pin,
     task::{Context, Poll},
+    time::{Duration, Instant},
 };
 
 /// Type alias for the smol runtime
@@ -69,6 +74,28 @@ impl<T> Future for STask<T> {
     }
 }
 
+#[async_trait]
+impl Reactor for Smol {
+    fn register<H: IO + Send + 'static>(
+        &self,
+        socket: IOHandle<H>,
+    ) -> io::Result<impl AsyncIOHandle + Send> {
+        Async::new(socket)
+    }
+
+    async fn sleep(&self, dur: Duration) {
+        Timer::after(dur).await;
+    }
+
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+        Timer::interval(dur)
+    }
+
+    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
+        Async::<TcpStream>::connect(addr).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,11 +104,15 @@ mod tests {
     fn dyn_compat() {
         struct Test {
             _executor: Box<dyn Executor>,
+            _reactor: Box<dyn Reactor>,
+            _kit: Box<dyn RuntimeKit>,
             _task: Box<dyn Task<String>>,
         }
 
         let _ = Test {
             _executor: Box::new(Smol),
+            _reactor: Box::new(Smol),
+            _kit: Box::new(Smol),
             _task: Box::new(STask(None)),
         };
     }

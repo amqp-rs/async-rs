@@ -96,6 +96,10 @@ impl<H: IO + Send + 'static> fmt::Debug for IOHandle<H> {
     }
 }
 
+#[allow(unsafe_code)]
+#[cfg(feature = "async-io")]
+unsafe impl<H: IO + Send + 'static> async_io::IoSafe for IOHandle<H> {}
+
 /// A trait representing an asynchronous IO handle
 pub trait AsyncIOHandle: AsyncRead + AsyncWrite {}
 impl<H: AsyncRead + AsyncWrite> AsyncIOHandle for H {}

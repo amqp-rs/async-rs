@@ -49,6 +49,28 @@ impl<RK: RuntimeKit + 'static> Executor for Runtime<RK> {
     }
 }
 
+#[async_trait]
+impl<RK: RuntimeKit + Sync + 'static> Reactor for Runtime<RK> {
+    fn register<H: IO + Send + 'static>(
+        &self,
+        socket: IOHandle<H>,
+    ) -> io::Result<impl AsyncIOHandle + Send> {
+        self.kit.register(socket)
+    }
+
+    async fn sleep(&self, dur: Duration) {
+        self.kit.sleep(dur).await;
+    }
+
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+        self.kit.interval(dur)
+    }
+
+    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
+        self.kit.tcp_connect(addr).await
+    }
+}
+
 /// Wrapper around separate Executor and Reactor implementing RuntimeKit
 #[derive(Debug)]
 pub struct RuntimeParts<E: Executor, R: Reactor> {

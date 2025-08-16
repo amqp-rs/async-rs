@@ -1,11 +1,13 @@
-use crate::{AsyncIOHandle, Executor, IOHandle, Reactor, RuntimeKit, Task, sys::IO};
+use crate::{
+    AsyncIOHandle, AsyncToSocketAddrs, Executor, IOHandle, Reactor, RuntimeKit, Task, sys::IO,
+};
 use async_trait::async_trait;
 use futures_core::Stream;
 use std::{
     fmt,
     future::Future,
     io,
-    net::SocketAddr,
+    net::{SocketAddr, ToSocketAddrs},
     pin::Pin,
     time::{Duration, Instant},
 };
@@ -20,6 +22,20 @@ impl<RK: RuntimeKit + 'static> Runtime<RK> {
     /// Create a new Runtime from a RuntimeKit
     pub fn new(kit: RK) -> Self {
         Self { kit }
+    }
+
+    /// Asynchronously resolve the given domain name
+    pub fn to_socket_addrs<A: ToSocketAddrs + Send + 'static>(
+        &self,
+        addrs: A,
+    ) -> impl AsyncToSocketAddrs
+    where
+        <A as std::net::ToSocketAddrs>::Iter: Iterator<Item = SocketAddr> + Send + 'static,
+    {
+        SocketAddrsResolver {
+            runtime: self,
+            addrs,
+        }
     }
 }
 
@@ -129,5 +145,23 @@ impl<E: Executor + Sync, R: Reactor + Sync> Reactor for RuntimeParts<E, R> {
 
     async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
         self.reactor.tcp_connect(addr).await
+    }
+}
+
+struct SocketAddrsResolver<'a, RK: RuntimeKit + 'static, A: ToSocketAddrs + Send + 'static> {
+    runtime: &'a Runtime<RK>,
+    addrs: A,
+}
+
+impl<'a, RK: RuntimeKit + 'static, A: ToSocketAddrs + Send + 'static> AsyncToSocketAddrs
+    for SocketAddrsResolver<'a, RK, A>
+where
+    <A as ToSocketAddrs>::Iter: Iterator<Item = SocketAddr> + Send + 'static,
+{
+    fn to_socket_addrs(
+        self,
+    ) -> impl Future<Output = io::Result<impl Iterator<Item = SocketAddr> + Send>> + Send {
+        let SocketAddrsResolver { runtime, addrs } = self;
+        runtime.spawn_blocking(move || addrs.to_socket_addrs())
     }
 }

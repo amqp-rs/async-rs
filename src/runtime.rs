@@ -1,5 +1,14 @@
-use crate::{Executor, Reactor, RuntimeKit, Task};
-use std::{fmt::Debug, future::Future, pin::Pin};
+use crate::{AsyncIOHandle, Executor, IOHandle, Reactor, RuntimeKit, Task, sys::IO};
+use async_trait::async_trait;
+use futures_core::Stream;
+use std::{
+    fmt::Debug,
+    future::Future,
+    io,
+    net::SocketAddr,
+    pin::Pin,
+    time::{Duration, Instant},
+};
 
 /// A full-featured Runtime implementation
 #[derive(Debug)]
@@ -44,18 +53,17 @@ impl<RK: RuntimeKit + 'static> Executor for Runtime<RK> {
 #[derive(Debug)]
 pub struct RuntimeParts<E: Executor, R: Reactor> {
     executor: E,
-    _reactor: R,
+    reactor: R,
 }
 
 impl<E: Executor, R: Reactor> RuntimeParts<E, R> {
     /// Create new RuntimeParts from separate Executor and Reactor
     pub fn new(executor: E, reactor: R) -> Self {
-        Self {
-            executor,
-            _reactor: reactor,
-        }
+        Self { executor, reactor }
     }
 }
+
+impl<E: Executor, R: Reactor> RuntimeKit for RuntimeParts<E, R> {}
 
 impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
     fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
@@ -77,4 +85,24 @@ impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
     }
 }
 
-impl<E: Executor, R: Reactor> RuntimeKit for RuntimeParts<E, R> {}
+#[async_trait]
+impl<E: Executor + Sync, R: Reactor + Sync> Reactor for RuntimeParts<E, R> {
+    fn register<H: IO + Send + 'static>(
+        &self,
+        socket: IOHandle<H>,
+    ) -> io::Result<impl AsyncIOHandle + Send> {
+        self.reactor.register(socket)
+    }
+
+    async fn sleep(&self, dur: Duration) {
+        self.reactor.sleep(dur).await;
+    }
+
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+        self.reactor.interval(dur)
+    }
+
+    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
+        self.reactor.tcp_connect(addr).await
+    }
+}

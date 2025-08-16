@@ -3,6 +3,11 @@ mod async_global_executor;
 #[cfg(feature = "async-global-executor")]
 pub use async_global_executor::*;
 
+#[cfg(feature = "async-io")]
+mod async_io;
+#[cfg(feature = "async-io")]
+pub use async_io::*;
+
 #[cfg(feature = "smol")]
 mod smol;
 #[cfg(feature = "smol")]

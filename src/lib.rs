@@ -1,5 +1,4 @@
-#![forbid(unsafe_code)]
-#![deny(missing_docs, missing_debug_implementations)]
+#![deny(missing_docs, missing_debug_implementations, unsafe_code)]
 
 //! A collection of traits and implementations to define a common interface across async runtimes
 

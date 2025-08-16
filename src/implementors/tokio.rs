@@ -1,6 +1,6 @@
 //! tokio implementation of async runtime definition traits
 
-use crate::{Executor, RuntimeKit, Task};
+use crate::{Executor, Runtime, RuntimeKit, Task};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::{
@@ -9,6 +9,21 @@ use core::{
     task::{Context, Poll},
 };
 use tokio::runtime::Handle;
+
+/// Type alias for the tokio runtime
+pub type TokioRuntime = Runtime<Tokio>;
+
+impl TokioRuntime {
+    /// Create a new TokioRuntime and bind it to the current tokio runtime by default.
+    pub fn tokio() -> Self {
+        Self::new(Tokio::current())
+    }
+
+    /// Create a new TokioRuntime and bind it to the tokio runtime associated to this handle by default.
+    pub fn tokio_with_handle(handle: Handle) -> Self {
+        Self::new(Tokio::default().with_handle(handle))
+    }
+}
 
 /// Dummy object implementing async common interfaces on top of tokio
 #[derive(Default, Debug, Clone)]

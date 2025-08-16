@@ -1,6 +1,6 @@
 //! smol implementation of async runtime definition traits
 
-use crate::{Executor, RuntimeKit, Task};
+use crate::{Executor, Runtime, RuntimeKit, Task};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::{
@@ -8,6 +8,16 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
+
+/// Type alias for the smol runtime
+pub type SmolRuntime = Runtime<Smol>;
+
+impl SmolRuntime {
+    /// Create a new SmolRuntime
+    pub fn smol() -> Self {
+        Self::new(Smol)
+    }
+}
 
 /// Dummy object implementing async common interfaces on top of smol
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -73,7 +83,7 @@ mod tests {
         }
 
         let _ = Test {
-            _executor: Box::new(Smol::default()),
+            _executor: Box::new(Smol),
             _task: Box::new(STask(None)),
         };
     }

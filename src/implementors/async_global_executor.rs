@@ -1,6 +1,6 @@
 //! async-global-executor implementation of async runtime definition traits
 
-use crate::{Executor, Task};
+use crate::{Executor, Runtime, RuntimeParts, Task};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::{
@@ -8,6 +8,16 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
+
+/// Type alias for the async-global-executor runtime
+pub type AGERuntime = Runtime<RuntimeParts<AsyncGlobalExecutor, ()>>;
+
+impl AGERuntime {
+    /// Create a new SmolRuntime
+    pub fn async_global_executor() -> Self {
+        Self::new(RuntimeParts::new(AsyncGlobalExecutor))
+    }
+}
 
 /// Dummy object implementing executor-trait common interfaces on top of async-global-executor
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -71,7 +81,7 @@ mod tests {
         }
 
         let _ = Test {
-            _executor: Box::new(AsyncGlobalExecutor::default()),
+            _executor: Box::new(AsyncGlobalExecutor),
             _task: Box::new(AGETask(None)),
         };
     }

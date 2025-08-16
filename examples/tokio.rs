@@ -1,4 +1,4 @@
-use async_rs::{Executor, Reactor, Runtime, TokioRuntime};
+use async_rs::{Runtime, TokioRuntime, traits::*};
 use std::{io, sync::Arc, time::Duration};
 
 async fn get_a(rt: Arc<TokioRuntime>) -> io::Result<u32> {

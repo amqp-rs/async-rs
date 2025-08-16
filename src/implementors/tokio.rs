@@ -1,6 +1,11 @@
 //! tokio implementation of async runtime definition traits
 
-use crate::{AsyncIOHandle, Executor, IOHandle, Reactor, Runtime, RuntimeKit, Task, sys::IO};
+use crate::{
+    Runtime,
+    sys::IO,
+    traits::{AsyncIOHandle, Executor, Reactor, RuntimeKit, Task},
+    util::IOHandle,
+};
 use async_trait::async_trait;
 use cfg_if::cfg_if;
 use futures_core::Stream;

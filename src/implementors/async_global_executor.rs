@@ -1,6 +1,10 @@
 //! async-global-executor implementation of async runtime definition traits
 
-use crate::{Executor, Runtime, RuntimeParts, Task};
+use crate::{
+    Runtime,
+    traits::{Executor, Task},
+    util::RuntimeParts,
+};
 use async_trait::async_trait;
 use std::{
     future::Future,
@@ -23,7 +27,7 @@ impl AGERuntime {
     }
 }
 
-/// Dummy object implementing executor-trait common interfaces on top of async-global-executor
+/// Dummy object implementing executor common interfaces on top of async-global-executor
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AsyncGlobalExecutor;
 

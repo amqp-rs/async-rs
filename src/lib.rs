@@ -1,6 +1,6 @@
 #![deny(missing_docs, missing_debug_implementations, unsafe_code)]
 
-//! A collection of traits and implementations to define a common interface across async runtimes
+//! A Rust async runtime abstration library.
 //!
 //! ## Features
 //!
@@ -12,7 +12,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use async_rs::{Executor, Reactor, Runtime, TokioRuntime};
+//! use async_rs::{Runtime, TokioRuntime, traits::*};
 //! use std::{io, sync::Arc, time::Duration};
 //!
 //! async fn get_a(rt: Arc<TokioRuntime>) -> io::Result<u32> {
@@ -43,8 +43,11 @@
 mod runtime;
 pub use runtime::*;
 
-mod traits;
-pub use traits::*;
+pub mod traits;
 
 mod implementors;
 pub use implementors::*;
+
+pub mod util;
+
+mod sys;

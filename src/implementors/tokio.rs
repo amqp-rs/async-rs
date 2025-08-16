@@ -2,6 +2,7 @@
 
 use crate::{AsyncIOHandle, Executor, IOHandle, Reactor, Runtime, RuntimeKit, Task, sys::IO};
 use async_trait::async_trait;
+use cfg_if::cfg_if;
 use futures_core::Stream;
 use std::{
     future::Future,
@@ -11,7 +12,7 @@ use std::{
     task::{Context, Poll},
     time::{Duration, Instant},
 };
-use tokio::{io::unix::AsyncFd, net::TcpStream, runtime::Handle};
+use tokio::{net::TcpStream, runtime::Handle};
 use tokio_stream::{StreamExt, wrappers::IntervalStream};
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
@@ -117,12 +118,16 @@ impl Reactor for Tokio {
         socket: IOHandle<H>,
     ) -> io::Result<impl AsyncIOHandle + Send> {
         let _enter = self.handle().as_ref().map(|handle| handle.enter());
-        if cfg!(unix) {
-            Ok(Box::new(unix::AsyncFdWrapper(AsyncFd::new(socket)?)))
-        } else {
-            Err(io::Error::other(
-                "Registering FD on tokio reactor is only supported on unix",
-            ))
+        cfg_if! {
+            if #[cfg(unix)] {
+                Ok(Box::new(unix::AsyncFdWrapper(
+                    tokio::io::unix::AsyncFd::new(socket)?,
+                )))
+            } else {
+                Err::<windows::Dummy, _>(io::Error::other(
+                    "Registering FD on tokio reactor is only supported on unix",
+                ))
+            }
         }
     }
 
@@ -149,6 +154,7 @@ mod unix {
     use super::*;
     use futures_io::{AsyncRead, AsyncWrite};
     use std::io::{IoSlice, IoSliceMut, Read, Write};
+    use tokio::io::unix::AsyncFd;
 
     pub(super) struct AsyncFdWrapper<H: IO + Send + 'static>(pub(super) AsyncFd<IOHandle<H>>);
 
@@ -256,6 +262,42 @@ mod unix {
 
         fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<futures_io::Result<()>> {
             self.poll_flush(cx)
+        }
+    }
+}
+
+#[cfg(windows)]
+mod windows {
+    use super::*;
+    use futures_io::{AsyncRead, AsyncWrite};
+
+    pub(super) struct Dummy;
+
+    impl AsyncRead for Dummy {
+        fn poll_read(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &mut [u8],
+        ) -> Poll<io::Result<usize>> {
+            Poll::Pending
+        }
+    }
+
+    impl AsyncWrite for Dummy {
+        fn poll_write(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &[u8],
+        ) -> Poll<io::Result<usize>> {
+            Poll::Pending
+        }
+
+        fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Poll::Pending
+        }
+
+        fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Poll::Pending
         }
     }
 }

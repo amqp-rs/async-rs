@@ -1,6 +1,6 @@
 //! async-global-executor implementation of async runtime definition traits
 
-use crate::executor::{Executor, Task};
+use crate::{Executor, Task};
 use alloc::boxed::Box;
 use async_trait::async_trait;
 use core::{

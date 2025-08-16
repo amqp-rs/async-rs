@@ -7,13 +7,8 @@
 extern crate alloc;
 extern crate core;
 
-pub mod executor;
+mod traits;
+pub use traits::*;
 
-#[cfg(feature = "async-global-executor")]
-pub mod async_global_executor;
-
-#[cfg(feature = "smol")]
-pub mod smol;
-
-#[cfg(feature = "tokio")]
-pub mod tokio;
+mod implementors;
+pub use implementors::*;

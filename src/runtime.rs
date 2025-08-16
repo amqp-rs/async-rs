@@ -58,8 +58,8 @@ impl<RK: RuntimeKit + Sync + 'static> Reactor for Runtime<RK> {
         self.kit.register(socket)
     }
 
-    async fn sleep(&self, dur: Duration) {
-        self.kit.sleep(dur).await;
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+        self.kit.sleep(dur)
     }
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
@@ -119,8 +119,8 @@ impl<E: Executor + Sync, R: Reactor + Sync> Reactor for RuntimeParts<E, R> {
         self.reactor.register(socket)
     }
 
-    async fn sleep(&self, dur: Duration) {
-        self.reactor.sleep(dur).await;
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+        self.reactor.sleep(dur)
     }
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {

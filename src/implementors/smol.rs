@@ -1,6 +1,8 @@
 //! smol implementation of async runtime definition traits
 
-use crate::{AsyncIOHandle, Executor, IOHandle, Reactor, Runtime, RuntimeKit, Task, sys::IO};
+use crate::{
+    AsyncIOHandle, Executor, IOHandle, Reactor, Runtime, RuntimeKit, Task, TimerTask, sys::IO,
+};
 use async_trait::async_trait;
 use futures_core::Stream;
 use smol::{Async, Timer};
@@ -83,8 +85,8 @@ impl Reactor for Smol {
         Async::new(socket)
     }
 
-    async fn sleep(&self, dur: Duration) {
-        Timer::after(dur).await;
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+        TimerTask(Timer::after(dur))
     }
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {

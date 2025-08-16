@@ -23,7 +23,9 @@ pub trait Reactor {
         Self: Sized;
 
     /// Sleep for the given duration
-    async fn sleep(&self, dur: Duration);
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()>
+    where
+        Self: Sized;
 
     /// Stream that yields at every given interval
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant>

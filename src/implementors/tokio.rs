@@ -126,8 +126,8 @@ impl Reactor for Tokio {
         }
     }
 
-    async fn sleep(&self, dur: Duration) {
-        tokio::time::sleep(dur).await;
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+        tokio::time::sleep(dur)
     }
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {

@@ -24,6 +24,8 @@ pub struct Smol;
 
 struct STask<T>(Option<smol::Task<T>>);
 
+impl RuntimeKit for Smol {}
+
 impl Executor for Smol {
     fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
         smol::block_on(f)
@@ -43,8 +45,6 @@ impl Executor for Smol {
         STask(Some(smol::unblock(f)))
     }
 }
-
-impl RuntimeKit for Smol {}
 
 #[async_trait(?Send)]
 impl<T> Task<T> for STask<T> {

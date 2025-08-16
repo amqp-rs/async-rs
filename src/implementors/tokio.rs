@@ -55,6 +55,8 @@ impl Tokio {
 
 struct TTask<T>(Option<tokio::task::JoinHandle<T>>);
 
+impl RuntimeKit for Tokio {}
+
 impl Executor for Tokio {
     fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
         if let Some(handle) = self.handle() {
@@ -86,8 +88,6 @@ impl Executor for Tokio {
         }))
     }
 }
-
-impl RuntimeKit for Tokio {}
 
 #[async_trait(?Send)]
 impl<T> Task<T> for TTask<T> {

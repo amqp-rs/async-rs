@@ -37,5 +37,8 @@ optional = true
 default-features = false
 features = ["rt-multi-thread"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [badges]
 maintenance = { status = "actively-developed" }

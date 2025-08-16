@@ -8,7 +8,6 @@ use std::{
     future::Future,
     io,
     net::{SocketAddr, ToSocketAddrs},
-    pin::Pin,
     time::{Duration, Instant},
 };
 
@@ -46,7 +45,7 @@ impl<RK: RuntimeKit + 'static> From<RK> for Runtime<RK> {
 }
 
 impl<RK: RuntimeKit + 'static> Executor for Runtime<RK> {
-    fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
+    fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         self.kit.block_on(f)
     }
 
@@ -107,7 +106,7 @@ impl<E: Executor + Sync + fmt::Debug, R: Reactor + Sync + fmt::Debug> RuntimeKit
 }
 
 impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
-    fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
+    fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         self.executor.block_on(f)
     }
 

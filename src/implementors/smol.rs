@@ -34,7 +34,7 @@ struct STask<T: Send>(Option<smol::Task<T>>);
 impl RuntimeKit for Smol {}
 
 impl Executor for Smol {
-    fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
+    fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         smol::block_on(f)
     }
 

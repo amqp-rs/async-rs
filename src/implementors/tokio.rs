@@ -59,7 +59,7 @@ struct TTask<T: Send>(Option<tokio::task::JoinHandle<T>>);
 impl RuntimeKit for Tokio {}
 
 impl Executor for Tokio {
-    fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
+    fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         if let Some(handle) = self.handle() {
             handle.block_on(f)
         } else {

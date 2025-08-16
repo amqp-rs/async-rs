@@ -30,7 +30,7 @@ pub struct AsyncGlobalExecutor;
 struct AGETask<T: Send>(Option<async_global_executor::Task<T>>);
 
 impl Executor for AsyncGlobalExecutor {
-    fn block_on<T>(&self, f: Pin<Box<dyn Future<Output = T>>>) -> T {
+    fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         async_global_executor::block_on(f)
     }
 

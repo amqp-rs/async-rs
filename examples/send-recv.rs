@@ -4,20 +4,17 @@ use std::{
     io,
     net::TcpListener,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll, Waker},
 };
 
-async fn listener(rt: Arc<TokioRuntime>) -> io::Result<TcpListener> {
+async fn listener(rt: &TokioRuntime) -> io::Result<TcpListener> {
     rt.spawn_blocking(|| TcpListener::bind(("127.0.0.1", 7654)))
         .await
 }
 
-/*
-async fn sender(rt: Arc<TokioRuntime>) -> io::Result<impl AsyncIOHandle + Send> {
+async fn sender(rt: &TokioRuntime) -> io::Result<impl AsyncIOHandle + Send> {
     rt.tcp_connect(([127, 0, 0, 1], 7654).into()).await
 }
-*/
 
 fn send(mut stream: impl AsyncIOHandle + Unpin) -> io::Result<()> {
     let mut context = Context::from_waker(Waker::noop());
@@ -32,10 +29,9 @@ fn send(mut stream: impl AsyncIOHandle + Unpin) -> io::Result<()> {
 }
 
 async fn tokio_main() -> io::Result<()> {
-    let rt = Arc::new(Runtime::tokio());
-    let listener = listener(rt.clone()).await?;
-    //let sender = sender(rt.clone()).await?;
-    let sender = rt.tcp_connect(([127, 0, 0, 1], 7654).into()).await?;
+    let rt = Runtime::tokio();
+    let listener = listener(&rt).await?;
+    let sender = sender(&rt).await?;
     let stream = rt
         .spawn_blocking(move || listener.incoming().next().unwrap())
         .await?;

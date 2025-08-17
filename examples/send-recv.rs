@@ -25,7 +25,10 @@ fn send(mut stream: impl AsyncIOHandle + Unpin) -> io::Result<()> {
         Poll::Pending => panic!("Could not write"),
         Poll::Ready(res) => assert_eq!(res?, 13),
     };
-    Ok(())
+    match Pin::new(&mut stream).poll_flush(&mut context) {
+        Poll::Pending => panic!("Could not flush"),
+        Poll::Ready(res) => res,
+    }
 }
 
 async fn tokio_main() -> io::Result<()> {
@@ -50,10 +53,5 @@ async fn tokio_main() -> io::Result<()> {
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    tokio_main().await
-}
-
-#[tokio::test]
-async fn tokio() -> io::Result<()> {
     tokio_main().await
 }

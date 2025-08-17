@@ -7,6 +7,7 @@ use futures_io::{AsyncRead, AsyncWrite};
 use std::{
     io,
     net::SocketAddr,
+    ops::Deref,
     time::{Duration, Instant},
 };
 
@@ -35,6 +36,31 @@ pub trait Reactor {
     async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send>
     where
         Self: Sized;
+}
+
+#[async_trait]
+impl<R: Deref + Sync> Reactor for R
+where
+    R::Target: Reactor + Sized,
+{
+    fn register<H: IO + Send + 'static>(
+        &self,
+        socket: IOHandle<H>,
+    ) -> io::Result<impl AsyncIOHandle + Send> {
+        self.deref().register(socket)
+    }
+
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+        self.deref().sleep(dur)
+    }
+
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+        self.deref().interval(dur)
+    }
+
+    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
+        self.deref().tcp_connect(addr).await
+    }
 }
 
 /// A trait representing an asynchronous IO handle

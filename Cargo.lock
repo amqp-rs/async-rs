@@ -66,6 +66,7 @@ dependencies = [
  "async-lock",
  "blocking",
  "futures-lite",
+ "tokio",
 ]
 
 [[package]]

@@ -1,4 +1,5 @@
 #![deny(missing_docs, missing_debug_implementations, unsafe_code)]
+#![allow(clippy::manual_async_fn)]
 
 //! A Rust async runtime abstration library.
 //!

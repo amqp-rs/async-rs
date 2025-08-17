@@ -4,7 +4,6 @@ use crate::{
     util::{IOHandle, UnitFuture},
 };
 use async_io::{Async, Timer};
-use async_trait::async_trait;
 use futures_core::Stream;
 use std::{
     future::Future,
@@ -17,7 +16,6 @@ use std::{
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AsyncIO;
 
-#[async_trait]
 impl Reactor for AsyncIO {
     fn register<H: IO + Send + 'static>(
         &self,
@@ -34,8 +32,11 @@ impl Reactor for AsyncIO {
         Timer::interval(dur)
     }
 
-    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
-        Async::<TcpStream>::connect(addr).await
+    fn tcp_connect(
+        &self,
+        addr: SocketAddr,
+    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
+        Async::<TcpStream>::connect(addr)
     }
 }
 

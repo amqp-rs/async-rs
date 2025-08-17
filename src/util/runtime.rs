@@ -3,7 +3,6 @@ use crate::{
     traits::{AsyncIOHandle, Executor, Reactor, RuntimeKit, Task},
     util::IOHandle,
 };
-use async_trait::async_trait;
 use futures_core::Stream;
 use std::{
     fmt,
@@ -52,7 +51,6 @@ impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
     }
 }
 
-#[async_trait]
 impl<E: Executor + Sync, R: Reactor + Sync> Reactor for RuntimeParts<E, R> {
     fn register<H: IO + Send + 'static>(
         &self,
@@ -69,7 +67,10 @@ impl<E: Executor + Sync, R: Reactor + Sync> Reactor for RuntimeParts<E, R> {
         self.reactor.interval(dur)
     }
 
-    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
-        self.reactor.tcp_connect(addr).await
+    fn tcp_connect(
+        &self,
+        addr: SocketAddr,
+    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
+        self.reactor.tcp_connect(addr)
     }
 }

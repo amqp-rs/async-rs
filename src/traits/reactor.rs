@@ -1,7 +1,6 @@
 //! A collection of traits to define a common interface across reactors
 
 use crate::{sys::IO, util::IOHandle};
-use async_trait::async_trait;
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
@@ -12,7 +11,6 @@ use std::{
 };
 
 /// A common interface for performing actions on a reactor
-#[async_trait]
 pub trait Reactor {
     /// Register a synchronous handle, returning an asynchronous one
     fn register<H: IO + Send + 'static>(
@@ -33,12 +31,14 @@ pub trait Reactor {
         Self: Sized;
 
     /// Create a TcpStream by connecting to a remote host
-    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send>
+    fn tcp_connect(
+        &self,
+        addr: SocketAddr,
+    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send
     where
         Self: Sized;
 }
 
-#[async_trait]
 impl<R: Deref + Sync> Reactor for R
 where
     R::Target: Reactor + Sized,
@@ -58,8 +58,11 @@ where
         self.deref().interval(dur)
     }
 
-    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
-        self.deref().tcp_connect(addr).await
+    fn tcp_connect(
+        &self,
+        addr: SocketAddr,
+    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
+        self.deref().tcp_connect(addr)
     }
 }
 

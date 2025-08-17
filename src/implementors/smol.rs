@@ -79,7 +79,6 @@ impl<T: Send> Future for STask<T> {
     }
 }
 
-#[async_trait]
 impl Reactor for Smol {
     fn register<H: IO + Send + 'static>(
         &self,
@@ -96,8 +95,11 @@ impl Reactor for Smol {
         Timer::interval(dur)
     }
 
-    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
-        Async::<TcpStream>::connect(addr).await
+    fn tcp_connect(
+        &self,
+        addr: SocketAddr,
+    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
+        Async::<TcpStream>::connect(addr)
     }
 }
 

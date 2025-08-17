@@ -116,7 +116,6 @@ impl<T: Send> Future for TTask<T> {
     }
 }
 
-#[async_trait]
 impl Reactor for Tokio {
     fn register<H: IO + Send + 'static>(
         &self,
@@ -147,10 +146,13 @@ impl Reactor for Tokio {
         )
     }
 
-    async fn tcp_connect(&self, addr: SocketAddr) -> io::Result<impl AsyncIOHandle + Send> {
+    fn tcp_connect(
+        &self,
+        addr: SocketAddr,
+    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
         // We cannot do that as EnterGuard is not Send (which makes sense)
         // let _enter = self.handle().as_ref().map(|handle| handle.enter());
-        Ok(TcpStream::connect(addr).await?.compat())
+        async move { Ok(TcpStream::connect(addr).await?.compat()) }
     }
 }
 

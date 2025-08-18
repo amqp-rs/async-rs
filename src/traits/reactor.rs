@@ -16,7 +16,7 @@ pub trait Reactor {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncIOHandle + Send>
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send>
     where
         Self: Sized;
 
@@ -34,7 +34,7 @@ pub trait Reactor {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send
     where
         Self: Sized;
 }
@@ -46,7 +46,7 @@ where
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncIOHandle + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
         self.deref().register(socket)
     }
 
@@ -61,11 +61,7 @@ where
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
         self.deref().tcp_connect(addr)
     }
 }
-
-/// A trait representing an asynchronous IO handle
-pub trait AsyncIOHandle: AsyncRead + AsyncWrite {}
-impl<H: AsyncRead + AsyncWrite> AsyncIOHandle for H {}

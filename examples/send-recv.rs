@@ -1,5 +1,5 @@
 use async_rs::{Runtime, TokioRuntime, traits::*, util::IOHandle};
-use futures_io::AsyncRead;
+use futures_io::{AsyncRead, AsyncWrite};
 use std::{
     io,
     net::TcpListener,
@@ -12,11 +12,11 @@ async fn listener(rt: &TokioRuntime) -> io::Result<TcpListener> {
         .await
 }
 
-async fn sender(rt: &TokioRuntime) -> io::Result<impl AsyncIOHandle + Send> {
+async fn sender(rt: &TokioRuntime) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
     rt.tcp_connect(([127, 0, 0, 1], 7654).into()).await
 }
 
-fn send(mut stream: impl AsyncIOHandle + Unpin) -> io::Result<()> {
+fn send(mut stream: impl AsyncRead + AsyncWrite + Unpin) -> io::Result<()> {
     let mut context = Context::from_waker(Waker::noop());
     match Pin::new(&mut stream).poll_write(&mut context, b"Hello, world!") {
         Poll::Pending => panic!("Could not write"),

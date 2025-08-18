@@ -3,11 +3,12 @@
 use crate::{
     Runtime,
     sys::IO,
-    traits::{AsyncIOHandle, Executor, Reactor, RuntimeKit, Task},
+    traits::{Executor, Reactor, RuntimeKit, Task},
     util::{IOHandle, UnitFuture},
 };
 use async_trait::async_trait;
 use futures_core::Stream;
+use futures_io::{AsyncRead, AsyncWrite};
 use smol::{Async, Timer};
 use std::{
     future::Future,
@@ -83,7 +84,7 @@ impl Reactor for Smol {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncIOHandle + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
         Async::new(socket)
     }
 
@@ -98,7 +99,7 @@ impl Reactor for Smol {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
         Async::<TcpStream>::connect(addr)
     }
 }

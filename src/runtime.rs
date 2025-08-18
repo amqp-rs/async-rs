@@ -1,9 +1,10 @@
 use crate::{
     sys::IO,
-    traits::{AsyncIOHandle, AsyncToSocketAddrs, Executor, Reactor, RuntimeKit, Task},
+    traits::{AsyncToSocketAddrs, Executor, Reactor, RuntimeKit, Task},
     util::IOHandle,
 };
 use futures_core::Stream;
+use futures_io::{AsyncRead, AsyncWrite};
 use std::{
     future::Future,
     io,
@@ -68,7 +69,7 @@ impl<RK: RuntimeKit + Sync + 'static> Reactor for Runtime<RK> {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncIOHandle + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
         self.kit.register(socket)
     }
 
@@ -83,7 +84,7 @@ impl<RK: RuntimeKit + Sync + 'static> Reactor for Runtime<RK> {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
         self.kit.tcp_connect(addr)
     }
 }

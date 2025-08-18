@@ -3,12 +3,13 @@
 use crate::{
     Runtime,
     sys::IO,
-    traits::{AsyncIOHandle, Executor, Reactor, RuntimeKit, Task},
+    traits::{Executor, Reactor, RuntimeKit, Task},
     util::IOHandle,
 };
 use async_trait::async_trait;
 use cfg_if::cfg_if;
 use futures_core::Stream;
+use futures_io::{AsyncRead, AsyncWrite};
 use std::{
     future::Future,
     io,
@@ -120,7 +121,7 @@ impl Reactor for Tokio {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncIOHandle + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
         let _enter = self.handle().as_ref().map(|handle| handle.enter());
         cfg_if! {
             if #[cfg(unix)] {
@@ -149,7 +150,7 @@ impl Reactor for Tokio {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncIOHandle + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
         // We cannot do that as EnterGuard is not Send (which makes sense)
         // let _enter = self.handle().as_ref().map(|handle| handle.enter());
         async move { Ok(TcpStream::connect(addr).await?.compat()) }

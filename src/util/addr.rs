@@ -3,9 +3,34 @@ use crate::{
     traits::{AsyncToSocketAddrs, Executor, RuntimeKit},
 };
 use std::{
-    fmt, io,
+    fmt, future, io,
     net::{SocketAddr, ToSocketAddrs},
 };
+
+/// Wrapper to impl AsyncToSocketAddrs from an IntoIterator<Item = SocketAddr>
+pub struct SocketAddrs<I: IntoIterator<Item = SocketAddr> + Send + 'static>(pub I);
+
+impl<I: IntoIterator<Item = SocketAddr> + Send + fmt::Debug + 'static> AsyncToSocketAddrs
+    for SocketAddrs<I>
+where
+    I::IntoIter: Send + 'static,
+{
+    fn to_socket_addrs(
+        self,
+    ) -> impl Future<Output = io::Result<impl Iterator<Item = SocketAddr> + Send + 'static>>
+    + Send
+    + 'static {
+        future::ready(Ok(self.0.into_iter()))
+    }
+}
+
+impl<I: IntoIterator<Item = SocketAddr> + Send + fmt::Debug + 'static> fmt::Debug
+    for SocketAddrs<I>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("SocketAddrs").field(&self.0).finish()
+    }
+}
 
 /// Wrapper to perform blocking name resolution on top of an async runtime
 pub struct SocketAddrsResolver<'a, RK: RuntimeKit, A: ToSocketAddrs + Send + 'static> {

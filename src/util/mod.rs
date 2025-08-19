@@ -3,7 +3,9 @@
 mod future;
 pub use future::*;
 
+#[cfg(feature = "async-io")]
 mod io;
+#[cfg(feature = "async-io")]
 pub use io::*;
 
 mod runtime;

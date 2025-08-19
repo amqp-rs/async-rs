@@ -1,13 +1,12 @@
 use crate::{
-    sys::IO,
+    sys::AsSysFd,
     traits::{AsyncToSocketAddrs, Executor, Reactor, RuntimeKit, Task},
-    util::IOHandle,
 };
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
     future::Future,
-    io,
+    io::{self, Read, Write},
     net::{SocketAddr, ToSocketAddrs},
     time::{Duration, Instant},
 };
@@ -66,9 +65,9 @@ impl<RK: RuntimeKit> Executor for Runtime<RK> {
 }
 
 impl<RK: RuntimeKit> Reactor for Runtime<RK> {
-    fn register<H: IO + Send + 'static>(
+    fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
-        socket: IOHandle<H>,
+        socket: H,
     ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         self.kit.register(socket)
     }

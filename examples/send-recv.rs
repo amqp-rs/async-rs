@@ -1,4 +1,4 @@
-use async_rs::{Runtime, TokioRuntime, traits::*, util::IOHandle};
+use async_rs::{Runtime, TokioRuntime, traits::*};
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
     io,
@@ -35,7 +35,7 @@ async fn tokio_main() -> io::Result<()> {
     let stream = rt
         .spawn_blocking(move || listener.incoming().next().unwrap())
         .await?;
-    let mut stream = rt.register(IOHandle::new(stream))?;
+    let mut stream = rt.register(stream)?;
     let mut buf = vec![0u8; 13];
     let mut context = Context::from_waker(Waker::noop());
     send(sender)?;

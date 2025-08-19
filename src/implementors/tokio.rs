@@ -2,9 +2,8 @@
 
 use crate::{
     Runtime,
-    sys::IO,
+    sys::AsSysFd,
     traits::{Executor, Reactor, RuntimeKit, Task},
-    util::IOHandle,
 };
 use async_trait::async_trait;
 use cfg_if::cfg_if;
@@ -12,7 +11,7 @@ use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
     future::Future,
-    io,
+    io::{self, Read, Write},
     net::SocketAddr,
     pin::Pin,
     task::{Context, Poll},
@@ -118,16 +117,16 @@ impl<T: Send + 'static> Future for TTask<T> {
 }
 
 impl Reactor for Tokio {
-    fn register<H: IO + Send + 'static>(
+    fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
-        socket: IOHandle<H>,
+        socket: H,
     ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         let _enter = self.handle().as_ref().map(|handle| handle.enter());
         cfg_if! {
             if #[cfg(unix)] {
-                Ok(Box::new(unix::AsyncFdWrapper(
+                Ok(unix::AsyncFdWrapper(
                     tokio::io::unix::AsyncFd::new(socket)?,
-                )))
+                ))
             } else {
                 Err::<windows::Dummy, _>(io::Error::other(
                     "Registering FD on tokio reactor is only supported on unix",
@@ -162,13 +161,13 @@ impl Reactor for Tokio {
 mod unix {
     use super::*;
     use futures_io::{AsyncRead, AsyncWrite};
-    use std::io::{IoSlice, IoSliceMut, Read, Write};
+    use std::io::{IoSlice, IoSliceMut};
     use tokio::io::unix::AsyncFd;
 
-    pub(super) struct AsyncFdWrapper<H: IO + Send + 'static>(pub(super) AsyncFd<IOHandle<H>>);
+    pub(super) struct AsyncFdWrapper<H: Read + Write + AsSysFd>(pub(super) AsyncFd<H>);
 
-    impl<H: IO + Send + 'static> AsyncFdWrapper<H> {
-        fn read<F: FnOnce(&mut AsyncFd<IOHandle<H>>) -> io::Result<usize>>(
+    impl<H: Read + Write + AsSysFd> AsyncFdWrapper<H> {
+        fn read<F: FnOnce(&mut AsyncFd<H>) -> io::Result<usize>>(
             mut self: Pin<&mut Self>,
             cx: &mut Context<'_>,
             f: F,
@@ -183,7 +182,7 @@ mod unix {
             })
         }
 
-        fn write<R, F: FnOnce(&mut AsyncFd<IOHandle<H>>) -> io::Result<R>>(
+        fn write<R, F: FnOnce(&mut AsyncFd<H>) -> io::Result<R>>(
             mut self: Pin<&mut Self>,
             cx: &mut Context<'_>,
             f: F,
@@ -199,9 +198,9 @@ mod unix {
         }
     }
 
-    impl<H: IO + Send + 'static> Unpin for AsyncFdWrapper<H> {}
+    impl<H: Read + Write + AsSysFd> Unpin for AsyncFdWrapper<H> {}
 
-    impl<H: IO + Send + 'static> AsyncRead for AsyncFdWrapper<H> {
+    impl<H: Read + Write + AsSysFd> AsyncRead for AsyncFdWrapper<H> {
         fn poll_read(
             mut self: Pin<&mut Self>,
             cx: &mut Context<'_>,
@@ -230,7 +229,7 @@ mod unix {
         }
     }
 
-    impl<H: IO + Send + 'static> AsyncWrite for AsyncFdWrapper<H> {
+    impl<H: Read + Write + AsSysFd + Send + 'static> AsyncWrite for AsyncFdWrapper<H> {
         fn poll_write(
             mut self: Pin<&mut Self>,
             cx: &mut Context<'_>,

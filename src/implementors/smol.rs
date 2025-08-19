@@ -2,7 +2,7 @@
 
 use crate::{
     Runtime,
-    sys::IO,
+    sys::AsSysFd,
     traits::{Executor, Reactor, RuntimeKit, Task},
     util::{IOHandle, UnitFuture},
 };
@@ -12,7 +12,7 @@ use futures_io::{AsyncRead, AsyncWrite};
 use smol::{Async, Timer};
 use std::{
     future::Future,
-    io,
+    io::{self, Read, Write},
     net::{SocketAddr, TcpStream},
     pin::Pin,
     task::{Context, Poll},
@@ -81,11 +81,11 @@ impl<T: Send + 'static> Future for STask<T> {
 }
 
 impl Reactor for Smol {
-    fn register<H: IO + Send + 'static>(
+    fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
-        socket: IOHandle<H>,
+        socket: H,
     ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
-        Async::new(socket)
+        Async::new(IOHandle::new(socket))
     }
 
     fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {

@@ -1,20 +1,20 @@
-use crate::sys::IO;
+use crate::sys::AsSysFd;
 use std::{
     fmt,
     io::{self, IoSlice, IoSliceMut, Read, Write},
 };
 
 /// A synchronous IO handle
-pub struct IOHandle<H: IO + Send + 'static>(pub(crate) H);
+pub struct IOHandle<H: Read + Write + AsSysFd + Send + 'static>(pub(crate) H);
 
-impl<H: IO + Send + 'static> IOHandle<H> {
+impl<H: Read + Write + AsSysFd + Send + 'static> IOHandle<H> {
     /// Instantiate a new IO handle
     pub fn new(io: H) -> Self {
         Self(io)
     }
 }
 
-impl<H: IO + Send + 'static> Read for IOHandle<H> {
+impl<H: Read + Write + AsSysFd + Send + 'static> Read for IOHandle<H> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.0.read(buf)
     }
@@ -36,7 +36,7 @@ impl<H: IO + Send + 'static> Read for IOHandle<H> {
     }
 }
 
-impl<H: IO + Send + 'static> Write for IOHandle<H> {
+impl<H: Read + Write + AsSysFd + Send + 'static> Write for IOHandle<H> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.0.write(buf)
     }
@@ -58,7 +58,7 @@ impl<H: IO + Send + 'static> Write for IOHandle<H> {
     }
 }
 
-impl<H: IO + Send + 'static> fmt::Debug for IOHandle<H> {
+impl<H: Read + Write + AsSysFd + Send + 'static> fmt::Debug for IOHandle<H> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("IOHandle").finish()
     }
@@ -66,4 +66,4 @@ impl<H: IO + Send + 'static> fmt::Debug for IOHandle<H> {
 
 #[allow(unsafe_code)]
 #[cfg(feature = "async-io")]
-unsafe impl<H: IO + Send + 'static> async_io::IoSafe for IOHandle<H> {}
+unsafe impl<H: Read + Write + AsSysFd + Send + 'static> async_io::IoSafe for IOHandle<H> {}

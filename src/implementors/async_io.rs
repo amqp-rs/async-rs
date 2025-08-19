@@ -1,5 +1,5 @@
 use crate::{
-    sys::IO,
+    sys::AsSysFd,
     traits::Reactor,
     util::{IOHandle, UnitFuture},
 };
@@ -8,7 +8,7 @@ use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
     future::Future,
-    io,
+    io::{self, Read, Write},
     net::{SocketAddr, TcpStream},
     time::{Duration, Instant},
 };
@@ -18,11 +18,11 @@ use std::{
 pub struct AsyncIO;
 
 impl Reactor for AsyncIO {
-    fn register<H: IO + Send + 'static>(
+    fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
-        socket: IOHandle<H>,
+        socket: H,
     ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
-        Async::new(socket)
+        Async::new(IOHandle::new(socket))
     }
 
     fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {

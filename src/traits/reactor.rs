@@ -1,10 +1,10 @@
 //! A collection of traits to define a common interface across reactors
 
-use crate::{sys::IO, util::IOHandle};
+use crate::sys::AsSysFd;
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
-    io,
+    io::{self, Read, Write},
     net::SocketAddr,
     ops::Deref,
     time::{Duration, Instant},
@@ -13,9 +13,9 @@ use std::{
 /// A common interface for performing actions on a reactor
 pub trait Reactor {
     /// Register a synchronous handle, returning an asynchronous one
-    fn register<H: IO + Send + 'static>(
+    fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
-        socket: IOHandle<H>,
+        socket: H,
     ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>
     where
         Self: Sized;
@@ -45,9 +45,9 @@ impl<R: Deref> Reactor for R
 where
     R::Target: Reactor + Sized,
 {
-    fn register<H: IO + Send + 'static>(
+    fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
-        socket: IOHandle<H>,
+        socket: H,
     ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         self.deref().register(socket)
     }

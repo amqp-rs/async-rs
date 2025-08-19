@@ -19,7 +19,7 @@ use std::{
 };
 use tokio::{net::TcpStream, runtime::Handle};
 use tokio_stream::{StreamExt, wrappers::IntervalStream};
-use tokio_util::compat::TokioAsyncReadCompatExt;
+use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 
 /// Type alias for the tokio runtime
 pub type TokioRuntime = Runtime<Tokio>;
@@ -117,6 +117,8 @@ impl<T: Send + 'static> Future for TTask<T> {
 }
 
 impl Reactor for Tokio {
+    type TcpStream = Compat<TcpStream>;
+
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
         socket: H,
@@ -149,9 +151,7 @@ impl Reactor for Tokio {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
-    + Send
-    + 'static {
+    ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
         let _enter = self.handle().as_ref().map(|handle| handle.enter());
         async move { Ok(TcpStream::connect(addr).await?.compat()) }
     }
@@ -318,8 +318,8 @@ mod tests {
     fn dyn_compat() {
         struct Test {
             _executor: Box<dyn Executor>,
-            _reactor: Box<dyn Reactor>,
-            _kit: Box<dyn RuntimeKit>,
+            _reactor: Box<dyn Reactor<TcpStream = Compat<TcpStream>>>,
+            _kit: Box<dyn RuntimeKit<TcpStream = Compat<TcpStream>>>,
             _task: Box<dyn Task<String>>,
         }
 

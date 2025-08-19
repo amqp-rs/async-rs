@@ -81,6 +81,8 @@ impl<T: Send + 'static> Future for STask<T> {
 }
 
 impl Reactor for Smol {
+    type TcpStream = Async<TcpStream>;
+
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
         socket: H,
@@ -99,9 +101,7 @@ impl Reactor for Smol {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
-    + Send
-    + 'static {
+    ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
         Async::<TcpStream>::connect(addr)
     }
 }
@@ -114,8 +114,8 @@ mod tests {
     fn dyn_compat() {
         struct Test {
             _executor: Box<dyn Executor>,
-            _reactor: Box<dyn Reactor>,
-            _kit: Box<dyn RuntimeKit>,
+            _reactor: Box<dyn Reactor<TcpStream = Async<TcpStream>>>,
+            _kit: Box<dyn RuntimeKit<TcpStream = Async<TcpStream>>>,
             _task: Box<dyn Task<String>>,
         }
 

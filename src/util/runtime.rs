@@ -49,6 +49,8 @@ impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
 }
 
 impl<E: Executor, R: Reactor> Reactor for RuntimeParts<E, R> {
+    type TcpStream = R::TcpStream;
+
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
         socket: H,
@@ -67,9 +69,7 @@ impl<E: Executor, R: Reactor> Reactor for RuntimeParts<E, R> {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
-    + Send
-    + 'static {
+    ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
         self.reactor.tcp_connect(addr)
     }
 }

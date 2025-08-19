@@ -12,6 +12,9 @@ use std::{
 
 /// A common interface for performing actions on a reactor
 pub trait Reactor {
+    /// The type representing a TCP stream (after tcp_connect) for this reactor
+    type TcpStream: AsyncRead + AsyncWrite + Send + Unpin + 'static;
+
     /// Register a synchronous handle, returning an asynchronous one
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -34,9 +37,7 @@ pub trait Reactor {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
-    + Send
-    + 'static
+    ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static
     where
         Self: Sized;
 }
@@ -45,6 +46,8 @@ impl<R: Deref> Reactor for R
 where
     R::Target: Reactor + Sized,
 {
+    type TcpStream = <<R as Deref>::Target as Reactor>::TcpStream;
+
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
         socket: H,
@@ -63,9 +66,7 @@ where
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
-    + Send
-    + 'static {
+    ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
         self.deref().tcp_connect(addr)
     }
 }

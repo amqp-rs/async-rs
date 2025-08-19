@@ -66,6 +66,8 @@ impl<RK: RuntimeKit> Executor for Runtime<RK> {
 }
 
 impl<RK: RuntimeKit> Reactor for Runtime<RK> {
+    type TcpStream = <RK as Reactor>::TcpStream;
+
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
         socket: H,
@@ -84,9 +86,7 @@ impl<RK: RuntimeKit> Reactor for Runtime<RK> {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
-    + Send
-    + 'static {
+    ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
         self.kit.tcp_connect(addr)
     }
 }

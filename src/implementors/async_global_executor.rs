@@ -84,11 +84,16 @@ mod tests {
     fn dyn_compat() {
         struct Test {
             _executor: Box<dyn Executor>,
+            #[cfg(feature = "async-io")]
+            _kit: Box<
+                dyn crate::traits::RuntimeKit<TcpStream = async_io::Async<std::net::TcpStream>>,
+            >,
             _task: Box<dyn Task<String>>,
         }
 
         let _ = Test {
             _executor: Box::new(AsyncGlobalExecutor),
+            _kit: Box::new(RuntimeParts::new(AsyncGlobalExecutor, AsyncIO)),
             _task: Box::new(AGETask(None)),
         };
     }

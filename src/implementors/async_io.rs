@@ -18,6 +18,8 @@ use std::{
 pub struct AsyncIO;
 
 impl Reactor for AsyncIO {
+    type TcpStream = Async<TcpStream>;
+
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
         socket: H,
@@ -36,9 +38,7 @@ impl Reactor for AsyncIO {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
-    + Send
-    + 'static {
+    ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
         Async::<TcpStream>::connect(addr)
     }
 }
@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn dyn_compat() {
         struct Test {
-            _reactor: Box<dyn Reactor>,
+            _reactor: Box<dyn Reactor<TcpStream = Async<TcpStream>>>,
         }
 
         let _ = Test {

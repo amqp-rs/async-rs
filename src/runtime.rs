@@ -50,17 +50,17 @@ impl<RK: RuntimeKit + 'static> Executor for Runtime<RK> {
         self.kit.block_on(f)
     }
 
-    fn spawn<T: Send + 'static>(
+    fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
-        f: impl Future<Output = T> + Send + 'static,
-    ) -> impl Task<T> {
+        f: F,
+    ) -> impl Task<T> + 'static {
         self.kit.spawn(f)
     }
 
-    fn spawn_blocking<F: FnOnce() -> T + Send + 'static, T: Send + 'static>(
+    fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> {
+    ) -> impl Task<T> + 'static {
         self.kit.spawn_blocking(f)
     }
 }

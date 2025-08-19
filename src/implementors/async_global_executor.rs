@@ -31,36 +31,36 @@ impl AGERuntime {
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AsyncGlobalExecutor;
 
-struct AGETask<T: Send>(Option<async_global_executor::Task<T>>);
+struct AGETask<T: Send + 'static>(Option<async_global_executor::Task<T>>);
 
 impl Executor for AsyncGlobalExecutor {
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         async_global_executor::block_on(f)
     }
 
-    fn spawn<T: Send + 'static>(
+    fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
-        f: impl Future<Output = T> + Send + 'static,
-    ) -> impl Task<T> {
+        f: F,
+    ) -> impl Task<T> + 'static {
         AGETask(Some(async_global_executor::spawn(f)))
     }
 
-    fn spawn_blocking<F: FnOnce() -> T + Send + 'static, T: Send + 'static>(
+    fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> {
+    ) -> impl Task<T> + 'static {
         AGETask(Some(async_global_executor::spawn_blocking(f)))
     }
 }
 
-#[async_trait(?Send)]
-impl<T: Send> Task<T> for AGETask<T> {
+#[async_trait]
+impl<T: Send + 'static> Task<T> for AGETask<T> {
     async fn cancel(&mut self) -> Option<T> {
         self.0.take()?.cancel().await
     }
 }
 
-impl<T: Send> Drop for AGETask<T> {
+impl<T: Send + 'static> Drop for AGETask<T> {
     fn drop(&mut self) {
         if let Some(task) = self.0.take() {
             task.detach();
@@ -68,7 +68,7 @@ impl<T: Send> Drop for AGETask<T> {
     }
 }
 
-impl<T: Send> Future for AGETask<T> {
+impl<T: Send + 'static> Future for AGETask<T> {
     type Output = T;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

@@ -33,7 +33,7 @@ impl SmolRuntime {
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Smol;
 
-struct STask<T: Send>(Option<smol::Task<T>>);
+struct STask<T: Send + 'static>(Option<smol::Task<T>>);
 
 impl RuntimeKit for Smol {}
 
@@ -42,29 +42,29 @@ impl Executor for Smol {
         smol::block_on(f)
     }
 
-    fn spawn<T: Send + 'static>(
+    fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
-        f: impl Future<Output = T> + Send + 'static,
-    ) -> impl Task<T> {
+        f: F,
+    ) -> impl Task<T> + 'static {
         STask(Some(smol::spawn(f)))
     }
 
-    fn spawn_blocking<F: FnOnce() -> T + Send + 'static, T: Send + 'static>(
+    fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> {
+    ) -> impl Task<T> + 'static {
         STask(Some(smol::unblock(f)))
     }
 }
 
-#[async_trait(?Send)]
-impl<T: Send> Task<T> for STask<T> {
+#[async_trait]
+impl<T: Send + 'static> Task<T> for STask<T> {
     async fn cancel(&mut self) -> Option<T> {
         self.0.take()?.cancel().await
     }
 }
 
-impl<T: Send> Drop for STask<T> {
+impl<T: Send + 'static> Drop for STask<T> {
     fn drop(&mut self) {
         if let Some(task) = self.0.take() {
             task.detach();
@@ -72,7 +72,7 @@ impl<T: Send> Drop for STask<T> {
     }
 }
 
-impl<T: Send> Future for STask<T> {
+impl<T: Send + 'static> Future for STask<T> {
     type Output = T;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

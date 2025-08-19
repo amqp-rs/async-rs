@@ -11,15 +11,18 @@ pub trait Executor {
         Self: Sized;
 
     /// Spawn a future and return a handle to track its completion.
-    fn spawn<T: Send + 'static>(&self, f: impl Future<Output = T> + Send + 'static) -> impl Task<T>
+    fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
+        &self,
+        f: F,
+    ) -> impl Task<T> + 'static
     where
         Self: Sized;
 
     /// Convert a blocking task into a future, spawning it on a decicated thread pool
-    fn spawn_blocking<F: FnOnce() -> T + Send + 'static, T: Send + 'static>(
+    fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T>
+    ) -> impl Task<T> + 'static
     where
         Self: Sized;
 }
@@ -32,24 +35,24 @@ where
         self.deref().block_on(f)
     }
 
-    fn spawn<T: Send + 'static>(
+    fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
-        f: impl Future<Output = T> + Send + 'static,
-    ) -> impl Task<T> {
+        f: F,
+    ) -> impl Task<T> + 'static {
         self.deref().spawn(f)
     }
 
-    fn spawn_blocking<F: FnOnce() -> T + Send + 'static, T: Send + 'static>(
+    fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> {
+    ) -> impl Task<T> + 'static {
         self.deref().spawn_blocking(f)
     }
 }
 
 /// A common interface to wait for a Task completion, let it run n the background or cancel it.
-#[async_trait(?Send)]
-pub trait Task<T>: Future<Output = T> + Send {
+#[async_trait]
+pub trait Task<T: Send + 'static>: Future<Output = T> + Send + 'static {
     /// Cancels the task and waits for it to stop running.
     ///
     /// Returns the task's output if it was completed just before it got canceled, or None if it

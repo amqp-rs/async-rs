@@ -12,7 +12,7 @@ async fn listener(rt: &TokioRuntime) -> io::Result<TcpListener> {
         .await
 }
 
-async fn sender(rt: &TokioRuntime) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
+async fn sender(rt: &TokioRuntime) -> io::Result<impl AsyncRead + AsyncWrite + Send + 'static> {
     rt.tcp_connect(([127, 0, 0, 1], 7654).into()).await
 }
 

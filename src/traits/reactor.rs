@@ -34,7 +34,7 @@ pub trait Reactor {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send
     where
         Self: Sized;
 }
@@ -61,7 +61,7 @@ where
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
         self.deref().tcp_connect(addr)
     }
 }

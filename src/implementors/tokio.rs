@@ -150,7 +150,7 @@ impl Reactor for Tokio {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
         // We cannot do that as EnterGuard is not Send (which makes sense)
         // let _enter = self.handle().as_ref().map(|handle| handle.enter());
         async move { Ok(TcpStream::connect(addr).await?.compat()) }

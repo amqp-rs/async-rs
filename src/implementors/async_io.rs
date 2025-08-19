@@ -36,7 +36,7 @@ impl Reactor for AsyncIO {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
         Async::<TcpStream>::connect(addr)
     }
 }

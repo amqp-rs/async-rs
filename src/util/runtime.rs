@@ -71,7 +71,7 @@ impl<E: Executor + Sync, R: Reactor + Sync> Reactor for RuntimeParts<E, R> {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
         self.reactor.tcp_connect(addr)
     }
 }

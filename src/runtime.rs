@@ -84,7 +84,7 @@ impl<RK: RuntimeKit + Sync + 'static> Reactor for Runtime<RK> {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
         self.kit.tcp_connect(addr)
     }
 }

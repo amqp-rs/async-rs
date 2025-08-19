@@ -14,11 +14,11 @@ use std::{
 
 /// A full-featured Runtime implementation
 #[derive(Debug)]
-pub struct Runtime<RK: RuntimeKit + 'static> {
+pub struct Runtime<RK: RuntimeKit> {
     kit: RK,
 }
 
-impl<RK: RuntimeKit + 'static> Runtime<RK> {
+impl<RK: RuntimeKit> Runtime<RK> {
     /// Create a new Runtime from a RuntimeKit
     pub fn new(kit: RK) -> Self {
         Self { kit }
@@ -39,13 +39,13 @@ impl<RK: RuntimeKit + 'static> Runtime<RK> {
     }
 }
 
-impl<RK: RuntimeKit + 'static> From<RK> for Runtime<RK> {
+impl<RK: RuntimeKit> From<RK> for Runtime<RK> {
     fn from(kit: RK) -> Self {
         Self::new(kit)
     }
 }
 
-impl<RK: RuntimeKit + 'static> Executor for Runtime<RK> {
+impl<RK: RuntimeKit> Executor for Runtime<RK> {
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         self.kit.block_on(f)
     }
@@ -65,7 +65,7 @@ impl<RK: RuntimeKit + 'static> Executor for Runtime<RK> {
     }
 }
 
-impl<RK: RuntimeKit + 'static> Reactor for Runtime<RK> {
+impl<RK: RuntimeKit> Reactor for Runtime<RK> {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
@@ -91,12 +91,12 @@ impl<RK: RuntimeKit + 'static> Reactor for Runtime<RK> {
     }
 }
 
-struct SocketAddrsResolver<'a, RK: RuntimeKit + 'static, A: ToSocketAddrs + Send + 'static> {
+struct SocketAddrsResolver<'a, RK: RuntimeKit, A: ToSocketAddrs + Send + 'static> {
     runtime: &'a Runtime<RK>,
     addrs: A,
 }
 
-impl<'a, RK: RuntimeKit + 'static, A: ToSocketAddrs + Send + 'static> AsyncToSocketAddrs
+impl<'a, RK: RuntimeKit, A: ToSocketAddrs + Send + 'static> AsyncToSocketAddrs
     for SocketAddrsResolver<'a, RK, A>
 where
     <A as ToSocketAddrs>::Iter: Iterator<Item = SocketAddr> + Send + 'static,

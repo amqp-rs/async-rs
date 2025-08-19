@@ -27,10 +27,7 @@ impl<E: Executor, R: Reactor> RuntimeParts<E, R> {
     }
 }
 
-impl<E: Executor + Sync + fmt::Debug, R: Reactor + Sync + fmt::Debug> RuntimeKit
-    for RuntimeParts<E, R>
-{
-}
+impl<E: Executor + fmt::Debug, R: Reactor + fmt::Debug> RuntimeKit for RuntimeParts<E, R> {}
 
 impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
@@ -52,7 +49,7 @@ impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
     }
 }
 
-impl<E: Executor + Sync, R: Reactor + Sync> Reactor for RuntimeParts<E, R> {
+impl<E: Executor, R: Reactor> Reactor for RuntimeParts<E, R> {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,

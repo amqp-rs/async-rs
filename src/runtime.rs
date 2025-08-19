@@ -65,7 +65,7 @@ impl<RK: RuntimeKit + 'static> Executor for Runtime<RK> {
     }
 }
 
-impl<RK: RuntimeKit + Sync + 'static> Reactor for Runtime<RK> {
+impl<RK: RuntimeKit + 'static> Reactor for Runtime<RK> {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,

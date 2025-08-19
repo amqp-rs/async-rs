@@ -39,7 +39,7 @@ pub trait Reactor {
         Self: Sized;
 }
 
-impl<R: Deref + Sync> Reactor for R
+impl<R: Deref> Reactor for R
 where
     R::Target: Reactor + Sized,
 {

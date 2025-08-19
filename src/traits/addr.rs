@@ -5,7 +5,9 @@ pub trait AsyncToSocketAddrs {
     /// Resolve the domain name through DNS and return an `Iterator` of `SocketAddr`
     fn to_socket_addrs(
         self,
-    ) -> impl Future<Output = io::Result<impl Iterator<Item = SocketAddr> + Send>> + Send
+    ) -> impl Future<Output = io::Result<impl Iterator<Item = SocketAddr> + Send + 'static>>
+    + Send
+    + 'static
     where
         Self: Sized;
 }

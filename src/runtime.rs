@@ -1,6 +1,7 @@
 use crate::{
     sys::AsSysFd,
     traits::{AsyncToSocketAddrs, Executor, Reactor, RuntimeKit, Task},
+    util::SocketAddrsResolver,
 };
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
@@ -87,23 +88,5 @@ impl<RK: RuntimeKit> Reactor for Runtime<RK> {
     + Send
     + 'static {
         self.kit.tcp_connect(addr)
-    }
-}
-
-struct SocketAddrsResolver<'a, RK: RuntimeKit, A: ToSocketAddrs + Send + 'static> {
-    runtime: &'a Runtime<RK>,
-    addrs: A,
-}
-
-impl<'a, RK: RuntimeKit, A: ToSocketAddrs + Send + 'static> AsyncToSocketAddrs
-    for SocketAddrsResolver<'a, RK, A>
-where
-    <A as ToSocketAddrs>::Iter: Iterator<Item = SocketAddr> + Send + 'static,
-{
-    fn to_socket_addrs(
-        self,
-    ) -> impl Future<Output = io::Result<impl Iterator<Item = SocketAddr> + Send>> + Send {
-        let SocketAddrsResolver { runtime, addrs } = self;
-        runtime.spawn_blocking(move || addrs.to_socket_addrs())
     }
 }

@@ -1,5 +1,8 @@
 //! A collection of utilities to deal with IO, futures and runtimes
 
+mod addr;
+pub use addr::*;
+
 mod future;
 pub use future::*;
 

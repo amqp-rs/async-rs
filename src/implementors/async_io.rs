@@ -21,22 +21,24 @@ impl Reactor for AsyncIO {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         Async::new(socket)
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
         UnitFuture(Timer::after(dur))
     }
 
-    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {
         Timer::interval(dur)
     }
 
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
+    + Send
+    + 'static {
         Async::<TcpStream>::connect(addr)
     }
 }

@@ -53,22 +53,24 @@ impl<E: Executor, R: Reactor> Reactor for RuntimeParts<E, R> {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         self.reactor.register(socket)
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
         self.reactor.sleep(dur)
     }
 
-    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {
         self.reactor.interval(dur)
     }
 
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
+    + Send
+    + 'static {
         self.reactor.tcp_connect(addr)
     }
 }

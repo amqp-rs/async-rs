@@ -16,17 +16,17 @@ pub trait Reactor {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncRead + AsyncWrite + Send>
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>
     where
         Self: Sized;
 
     /// Sleep for the given duration
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()>
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static
     where
         Self: Sized;
 
     /// Stream that yields at every given interval
-    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant>
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static
     where
         Self: Sized;
 
@@ -34,7 +34,9 @@ pub trait Reactor {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
+    + Send
+    + 'static
     where
         Self: Sized;
 }
@@ -46,22 +48,24 @@ where
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         self.deref().register(socket)
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
         self.deref().sleep(dur)
     }
 
-    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {
         self.deref().interval(dur)
     }
 
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
+    + Send
+    + 'static {
         self.deref().tcp_connect(addr)
     }
 }

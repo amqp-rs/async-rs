@@ -69,22 +69,24 @@ impl<RK: RuntimeKit + 'static> Reactor for Runtime<RK> {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         self.kit.register(socket)
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
         self.kit.sleep(dur)
     }
 
-    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {
         self.kit.interval(dur)
     }
 
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
+    + Send
+    + 'static {
         self.kit.tcp_connect(addr)
     }
 }

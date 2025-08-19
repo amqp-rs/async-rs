@@ -121,7 +121,7 @@ impl Reactor for Tokio {
     fn register<H: IO + Send + 'static>(
         &self,
         socket: IOHandle<H>,
-    ) -> io::Result<impl AsyncRead + AsyncWrite + Send> {
+    ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         let _enter = self.handle().as_ref().map(|handle| handle.enter());
         cfg_if! {
             if #[cfg(unix)] {
@@ -136,11 +136,11 @@ impl Reactor for Tokio {
         }
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> {
+    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
         tokio::time::sleep(dur)
     }
 
-    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> {
+    fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {
         let _enter = self.handle().as_ref().map(|handle| handle.enter());
         Box::new(
             IntervalStream::new(tokio::time::interval(dur)).map(tokio::time::Instant::into_std),
@@ -150,7 +150,9 @@ impl Reactor for Tokio {
     fn tcp_connect(
         &self,
         addr: SocketAddr,
-    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + 'static>> + Send {
+    ) -> impl Future<Output = io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static>>
+    + Send
+    + 'static {
         let _enter = self.handle().as_ref().map(|handle| handle.enter());
         async move { Ok(TcpStream::connect(addr).await?.compat()) }
     }

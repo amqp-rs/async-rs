@@ -9,9 +9,7 @@ mod async_io;
 pub use async_io::*;
 
 #[cfg(feature = "hickory-dns")]
-mod hickory;
-#[cfg(feature = "hickory-dns")]
-pub use hickory::*;
+pub mod hickory;
 
 #[cfg(feature = "smol")]
 mod smol;

@@ -16,8 +16,9 @@ rust-version = "1.85.0"
 default = ["tokio"]
 async-global-executor = ["dep:async-global-executor"]
 async-io = ["dep:async-io", "async-global-executor?/async-io"]
+hickory-dns = ["dep:hickory-resolver", "tokio"] # hickory-dns only supports tokio as of now
 smol = ["dep:smol", "async-io"] # async-io required for implementing IoSafe
-tokio = ["dep:tokio", "dep:tokio-stream", "async-global-executor?/tokio"]
+tokio = ["dep:tokio", "dep:tokio-stream", "async-global-executor?/tokio", "hickory-resolver?/tokio"]
 
 [dependencies]
 async-trait = "^0.1.89"
@@ -33,6 +34,12 @@ default-features = false
 [dependencies.async-io]
 version = "^2.0"
 optional = true
+
+[dependencies.hickory-resolver]
+version = "^0.25"
+optional = true
+default-features = false
+features = ["system-config"]
 
 [dependencies.smol]
 version = "^2.0"

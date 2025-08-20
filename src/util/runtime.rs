@@ -66,10 +66,10 @@ impl<E: Executor, R: Reactor> Reactor for RuntimeParts<E, R> {
         self.reactor.interval(dur)
     }
 
-    fn tcp_connect(
+    fn tcp_connect_addr(
         &self,
         addr: SocketAddr,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
-        self.reactor.tcp_connect(addr)
+        self.reactor.tcp_connect_addr(addr)
     }
 }

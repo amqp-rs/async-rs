@@ -83,10 +83,10 @@ impl<RK: RuntimeKit> Reactor for Runtime<RK> {
         self.kit.interval(dur)
     }
 
-    fn tcp_connect(
+    fn tcp_connect_addr(
         &self,
         addr: SocketAddr,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
-        self.kit.tcp_connect(addr)
+        self.kit.tcp_connect_addr(addr)
     }
 }

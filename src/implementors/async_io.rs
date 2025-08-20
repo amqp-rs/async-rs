@@ -35,7 +35,7 @@ impl Reactor for AsyncIO {
         Timer::interval(dur)
     }
 
-    fn tcp_connect(
+    fn tcp_connect_addr(
         &self,
         addr: SocketAddr,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {

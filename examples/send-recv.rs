@@ -13,7 +13,7 @@ async fn listener(rt: &TokioRuntime) -> io::Result<TcpListener> {
 }
 
 async fn sender(rt: &TokioRuntime) -> io::Result<impl AsyncRead + AsyncWrite + Send + 'static> {
-    rt.tcp_connect(([127, 0, 0, 1], 7654).into()).await
+    rt.tcp_connect(([127, 0, 0, 1], 7654)).await
 }
 
 fn send(mut stream: impl AsyncRead + AsyncWrite + Unpin) -> io::Result<()> {

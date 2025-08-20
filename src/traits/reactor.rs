@@ -1,6 +1,6 @@
 //! A collection of traits to define a common interface across reactors
 
-use crate::sys::AsSysFd;
+use crate::{sys::AsSysFd, traits::AsyncToSocketAddrs};
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
@@ -34,7 +34,29 @@ pub trait Reactor {
         Self: Sized;
 
     /// Create a TcpStream by connecting to a remote host
-    fn tcp_connect(
+    fn tcp_connect<A: AsyncToSocketAddrs + Send + 'static>(
+        &self,
+        addrs: A,
+    ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send
+    where
+        Self: Sync + Sized,
+    {
+        async move {
+            let mut err = None;
+            for addr in addrs.to_socket_addrs().await? {
+                match self.tcp_connect_addr(addr).await {
+                    Ok(stream) => return Ok(stream),
+                    Err(e) => err = Some(e),
+                }
+            }
+            Err(err.unwrap_or_else(|| {
+                io::Error::new(io::ErrorKind::AddrNotAvailable, "couldn't resolve host")
+            }))
+        }
+    }
+
+    /// Create a TcpStream by connecting to a remote host
+    fn tcp_connect_addr(
         &self,
         addr: SocketAddr,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static
@@ -63,10 +85,10 @@ where
         self.deref().interval(dur)
     }
 
-    fn tcp_connect(
+    fn tcp_connect_addr(
         &self,
         addr: SocketAddr,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
-        self.deref().tcp_connect(addr)
+        self.deref().tcp_connect_addr(addr)
     }
 }

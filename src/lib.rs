@@ -47,6 +47,13 @@ pub use runtime::*;
 pub mod traits;
 
 mod implementors;
+#[cfg(any(
+    feature = "async-global-executor",
+    feature = "async-io",
+    feature = "hickory-dns",
+    feature = "smol",
+    feature = "tokio"
+))]
 pub use implementors::*;
 
 pub mod util;

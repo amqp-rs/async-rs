@@ -143,9 +143,7 @@ impl Reactor for Tokio {
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {
         let _enter = self.handle().as_ref().map(|handle| handle.enter());
-        Box::new(
-            IntervalStream::new(tokio::time::interval(dur)).map(tokio::time::Instant::into_std),
-        )
+        IntervalStream::new(tokio::time::interval(dur)).map(tokio::time::Instant::into_std)
     }
 
     fn tcp_connect_addr(

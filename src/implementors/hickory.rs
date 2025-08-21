@@ -1,6 +1,6 @@
-use crate::traits::AsyncToSocketAddrs;
-use hickory_resolver::{IntoName, Resolver, lookup_ip::LookupIpIntoIter};
-use std::{fmt, io, net::SocketAddr};
+use crate::{traits::AsyncToSocketAddrs, util::SocketAddrsFromIpAddrs};
+use hickory_resolver::{IntoName, Resolver};
+use std::{io, net::SocketAddr};
 
 /// Perform async DNS resolution using hickory-dns
 #[derive(Debug)]
@@ -22,7 +22,7 @@ impl<T: IntoName + Send + 'static> AsyncToSocketAddrs for HickoryToSocketAddrs<T
                 ));
             }
 
-            Ok(HickorySocketAddrs(
+            Ok(SocketAddrsFromIpAddrs(
                 Resolver::builder_tokio()?
                     .build()
                     .lookup_ip(self.host)
@@ -31,22 +31,5 @@ impl<T: IntoName + Send + 'static> AsyncToSocketAddrs for HickoryToSocketAddrs<T
                 self.port,
             ))
         }
-    }
-}
-
-/// Iterator for SocketAddr resolved by `hickory-dns`
-pub struct HickorySocketAddrs(LookupIpIntoIter, u16);
-
-impl Iterator for HickorySocketAddrs {
-    type Item = SocketAddr;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        Some(SocketAddr::new(self.0.next()?, self.1))
-    }
-}
-
-impl fmt::Debug for HickorySocketAddrs {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_tuple("HickorySocketAddrs").finish()
     }
 }

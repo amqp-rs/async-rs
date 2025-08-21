@@ -9,8 +9,9 @@ mod async_io;
 pub use async_io::*;
 
 #[cfg(feature = "hickory-dns")]
-/// Utilities to perform async DNS resolution using hickory DNS
-pub mod hickory;
+mod hickory;
+#[cfg(feature = "hickory-dns")]
+pub use hickory::*;
 
 #[cfg(feature = "smol")]
 mod smol;

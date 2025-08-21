@@ -4,7 +4,7 @@ use crate::{
 };
 use std::{
     fmt, future, io,
-    net::{SocketAddr, ToSocketAddrs},
+    net::{IpAddr, SocketAddr, ToSocketAddrs},
 };
 
 /// Wrapper to impl AsyncToSocketAddrs from an IntoIterator<Item = SocketAddr>
@@ -29,6 +29,23 @@ impl<I: IntoIterator<Item = SocketAddr> + Send + fmt::Debug + 'static> fmt::Debu
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("SocketAddrs").field(&self.0).finish()
+    }
+}
+
+/// Iterator for SocketAddr computed from IpAddr + port
+pub struct SocketAddrsFromIpAddrs<I: Iterator<Item = IpAddr> + Send + 'static>(pub I, pub u16);
+
+impl<I: Iterator<Item = IpAddr> + Send + 'static> Iterator for SocketAddrsFromIpAddrs<I> {
+    type Item = SocketAddr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(SocketAddr::new(self.0.next()?, self.1))
+    }
+}
+
+impl<I: Iterator<Item = IpAddr> + Send + 'static> fmt::Debug for SocketAddrsFromIpAddrs<I> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_tuple("SocketAddrsFromIpAddrs").finish()
     }
 }
 

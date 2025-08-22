@@ -34,7 +34,7 @@ pub trait Reactor {
         Self: Sized;
 
     /// Create a TcpStream by connecting to a remote host
-    fn tcp_connect<A: AsyncToSocketAddrs + Send + 'static>(
+    fn tcp_connect<A: AsyncToSocketAddrs + Send>(
         &self,
         addrs: A,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send

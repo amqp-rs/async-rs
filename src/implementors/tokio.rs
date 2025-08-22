@@ -17,7 +17,10 @@ use std::{
     task::{Context, Poll},
     time::{Duration, Instant},
 };
-use tokio::{net::TcpStream, runtime::Handle};
+use tokio::{
+    net::TcpStream,
+    runtime::{EnterGuard, Handle, Runtime as TokioRT},
+};
 use tokio_stream::{StreamExt, wrappers::IntervalStream};
 use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 
@@ -25,8 +28,13 @@ use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 pub type TokioRuntime = Runtime<Tokio>;
 
 impl TokioRuntime {
+    /// Create a new TokioRuntime and bind it to this tokio runtime.
+    pub fn tokio() -> io::Result<Self> {
+        Ok(Self::tokio_with_runtime(TokioRT::new()?))
+    }
+
     /// Create a new TokioRuntime and bind it to the current tokio runtime by default.
-    pub fn tokio() -> Self {
+    pub fn tokio_current() -> Self {
         Self::new(Tokio::current())
     }
 
@@ -34,12 +42,18 @@ impl TokioRuntime {
     pub fn tokio_with_handle(handle: Handle) -> Self {
         Self::new(Tokio::default().with_handle(handle))
     }
+
+    /// Create a new TokioRuntime and bind it to this tokio runtime.
+    pub fn tokio_with_runtime(runtime: TokioRT) -> Self {
+        Self::new(Tokio::default().with_runtime(runtime))
+    }
 }
 
 /// Dummy object implementing async common interfaces on top of tokio
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug)]
 pub struct Tokio {
     handle: Option<Handle>,
+    runtime: Option<TokioRT>,
 }
 
 impl Tokio {
@@ -49,13 +63,32 @@ impl Tokio {
         self
     }
 
+    /// Bind to the tokio Runtime associated to this handle by default.
+    pub fn with_runtime(mut self, runtime: TokioRT) -> Self {
+        let handle = runtime.handle().clone();
+        self.runtime = Some(runtime);
+        self.with_handle(handle)
+    }
+
     /// Bind to the current tokio Runtime by default.
     pub fn current() -> Self {
         Self::default().with_handle(Handle::current())
     }
 
-    pub(crate) fn handle(&self) -> Option<Handle> {
-        Handle::try_current().ok().or_else(|| self.handle.clone())
+    fn handle(&self) -> Option<Handle> {
+        self.runtime
+            .as_ref()
+            .map(|r| r.handle().clone())
+            .or_else(|| Handle::try_current().ok())
+            .or_else(|| self.handle.clone())
+    }
+
+    fn enter(&self) -> Option<EnterGuard<'_>> {
+        self.runtime
+            .as_ref()
+            .map(TokioRT::handle)
+            .or(self.handle.as_ref())
+            .map(Handle::enter)
     }
 }
 
@@ -65,7 +98,9 @@ impl RuntimeKit for Tokio {}
 
 impl Executor for Tokio {
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
-        if let Some(handle) = self.handle() {
+        if let Some(runtime) = self.runtime.as_ref() {
+            runtime.block_on(f)
+        } else if let Some(handle) = self.handle() {
             handle.block_on(f)
         } else {
             Handle::current().block_on(f)
@@ -123,7 +158,7 @@ impl Reactor for Tokio {
         &self,
         socket: H,
     ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
-        let _enter = self.handle().as_ref().map(|handle| handle.enter());
+        let _enter = self.enter();
         cfg_if! {
             if #[cfg(unix)] {
                 Ok(unix::AsyncFdWrapper(
@@ -138,11 +173,12 @@ impl Reactor for Tokio {
     }
 
     fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
+        let _enter = self.enter();
         tokio::time::sleep(dur)
     }
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {
-        let _enter = self.handle().as_ref().map(|handle| handle.enter());
+        let _enter = self.enter();
         IntervalStream::new(tokio::time::interval(dur)).map(tokio::time::Instant::into_std)
     }
 
@@ -150,7 +186,7 @@ impl Reactor for Tokio {
         &self,
         addr: SocketAddr,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
-        let _enter = self.handle().as_ref().map(|handle| handle.enter());
+        let _enter = self.enter();
         async move { Ok(TcpStream::connect(addr).await?.compat()) }
     }
 }

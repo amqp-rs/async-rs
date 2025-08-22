@@ -1,6 +1,6 @@
 use crate::{
     sys::AsSysFd,
-    traits::{AsyncToSocketAddrs, Executor, Reactor, RuntimeKit, Task},
+    traits::{Executor, Reactor, RuntimeKit, Task},
     util::SocketAddrsResolver,
 };
 use futures_core::Stream;
@@ -28,9 +28,9 @@ impl<RK: RuntimeKit> Runtime<RK> {
     pub fn to_socket_addrs<A: ToSocketAddrs + Send + 'static>(
         &self,
         addrs: A,
-    ) -> impl AsyncToSocketAddrs
+    ) -> SocketAddrsResolver<'_, RK, A>
     where
-        <A as std::net::ToSocketAddrs>::Iter: Iterator<Item = SocketAddr> + Send + 'static,
+        <A as std::net::ToSocketAddrs>::Iter: Send + 'static,
     {
         SocketAddrsResolver {
             runtime: self,

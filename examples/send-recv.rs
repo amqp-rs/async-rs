@@ -29,8 +29,8 @@ fn send(mut stream: impl AsyncRead + AsyncWrite + Unpin) -> io::Result<()> {
 }
 
 async fn tokio_main(rt: &TokioRuntime) -> io::Result<()> {
-    let listener = listener(&rt).await?;
-    let sender = sender(&rt).await?;
+    let listener = listener(rt).await?;
+    let sender = sender(rt).await?;
     let stream = rt
         .spawn_blocking(move || listener.incoming().next().unwrap())
         .await?;
@@ -46,7 +46,8 @@ async fn tokio_main(rt: &TokioRuntime) -> io::Result<()> {
     Ok(())
 }
 
-fn main() -> io::Result<()> {
-    let rt = Runtime::tokio()?;
-    rt.block_on(tokio_main(&rt))
+#[tokio::main]
+async fn main() -> io::Result<()> {
+    let rt = Runtime::tokio_current();
+    tokio_main(&rt).await
 }

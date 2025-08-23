@@ -1,6 +1,6 @@
 [package]
 name = "async-rs"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2024"
 authors = ["Marc-Antoine Perennou <Marc-Antoine@Perennou.com>"]
 description = "Async runtime abstration"

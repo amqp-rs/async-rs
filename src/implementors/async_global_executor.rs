@@ -97,4 +97,16 @@ mod tests {
             _task: Box::new(AGETask(None)),
         };
     }
+
+    #[test]
+    fn auto_traits() {
+        use crate::util::test::*;
+        #[cfg(feature = "async-io")]
+        let runtime = Runtime::async_global_executor();
+        #[cfg(not(feature = "async-io"))]
+        let runtime = AsyncGlobalExecutor;
+        assert_send(&runtime);
+        assert_sync(&runtime);
+        assert_clone(&runtime);
+    }
 }

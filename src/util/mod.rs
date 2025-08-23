@@ -18,3 +18,6 @@ pub use runtime::*;
 mod tokio;
 #[cfg(feature = "tokio")]
 pub use tokio::*;
+
+#[cfg(test)]
+pub(crate) mod test;

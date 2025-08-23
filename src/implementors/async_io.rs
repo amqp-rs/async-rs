@@ -57,4 +57,13 @@ mod tests {
             _reactor: Box::new(AsyncIO),
         };
     }
+
+    #[test]
+    fn auto_traits() {
+        use crate::util::test::*;
+        let runtime = AsyncIO;
+        assert_send(&runtime);
+        assert_sync(&runtime);
+        assert_clone(&runtime);
+    }
 }

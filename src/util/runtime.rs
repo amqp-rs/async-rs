@@ -13,7 +13,7 @@ use std::{
 };
 
 /// Wrapper around separate Executor and Reactor implementing RuntimeKit
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RuntimeParts<E: Executor, R: Reactor> {
     executor: E,
     reactor: R,

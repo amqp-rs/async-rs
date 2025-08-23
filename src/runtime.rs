@@ -13,7 +13,7 @@ use std::{
 };
 
 /// A full-featured Runtime implementation
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Runtime<RK: RuntimeKit> {
     kit: RK,
 }

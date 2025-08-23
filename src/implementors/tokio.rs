@@ -14,6 +14,7 @@ use std::{
     io::{self, Read, Write},
     net::SocketAddr,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
     time::{Duration, Instant},
 };
@@ -50,10 +51,10 @@ impl TokioRuntime {
 }
 
 /// Dummy object implementing async common interfaces on top of tokio
-#[derive(Default, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct Tokio {
     handle: Option<Handle>,
-    runtime: Option<TokioRT>,
+    runtime: Option<Arc<TokioRT>>,
 }
 
 impl Tokio {
@@ -66,7 +67,7 @@ impl Tokio {
     /// Bind to the tokio Runtime associated to this handle by default.
     pub fn with_runtime(mut self, runtime: TokioRT) -> Self {
         let handle = runtime.handle().clone();
-        self.runtime = Some(runtime);
+        self.runtime = Some(Arc::new(runtime));
         self.with_handle(handle)
     }
 
@@ -86,7 +87,7 @@ impl Tokio {
     fn enter(&self) -> Option<EnterGuard<'_>> {
         self.runtime
             .as_ref()
-            .map(TokioRT::handle)
+            .map(|r| r.handle())
             .or(self.handle.as_ref())
             .map(Handle::enter)
     }

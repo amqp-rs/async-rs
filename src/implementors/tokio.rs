@@ -369,7 +369,7 @@ mod tests {
     #[test]
     fn auto_traits() {
         use crate::util::test::*;
-        let runtime = Runtime::smol();
+        let runtime = Runtime::tokio().unwrap();
         assert_send(&runtime);
         assert_sync(&runtime);
         assert_clone(&runtime);

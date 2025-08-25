@@ -1,7 +1,7 @@
 use crate::{
     sys::AsSysFd,
-    traits::{Executor, Reactor, RuntimeKit, Task},
-    util::SocketAddrsResolver,
+    traits::{Executor, Reactor, RuntimeKit},
+    util::{SocketAddrsResolver, Task},
 };
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
@@ -46,6 +46,8 @@ impl<RK: RuntimeKit> From<RK> for Runtime<RK> {
 }
 
 impl<RK: RuntimeKit> Executor for Runtime<RK> {
+    type Task<T: Send + 'static> = <RK as Executor>::Task<T>;
+
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         self.kit.block_on(f)
     }
@@ -53,14 +55,14 @@ impl<RK: RuntimeKit> Executor for Runtime<RK> {
     fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
+    ) -> Task<Self::Task<T>> {
         self.kit.spawn(f)
     }
 
     fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
+    ) -> Task<Self::Task<T>> {
         self.kit.spawn_blocking(f)
     }
 }

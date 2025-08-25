@@ -3,10 +3,9 @@
 use crate::{
     Runtime,
     sys::AsSysFd,
-    traits::{Executor, Reactor, RuntimeKit, Task},
-    util::{DummyIO, DummyStream},
+    traits::{Executor, Reactor, RuntimeKit},
+    util::{DummyIO, DummyStream, Task},
 };
-use async_trait::async_trait;
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
@@ -14,10 +13,10 @@ use std::{
     io::{self, Read, Write},
     marker::PhantomData,
     net::SocketAddr,
-    pin::Pin,
-    task::{Context, Poll},
     time::{Duration, Instant},
 };
+
+use task::NTask;
 
 /// Type alias for the noop runtime
 pub type NoopRuntime = Runtime<Noop>;
@@ -33,11 +32,11 @@ impl NoopRuntime {
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Noop;
 
-struct NTask<T: Send + 'static>(PhantomData<T>);
-
 impl RuntimeKit for Noop {}
 
 impl Executor for Noop {
+    type Task<T: Send + 'static> = NTask<T>;
+
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         // We cannot fake something unless we require T: Default, which we don't want.
         // Let's get a minimalist implementation for this one.
@@ -47,26 +46,15 @@ impl Executor for Noop {
     fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
         _f: F,
-    ) -> impl Task<T> + 'static {
-        NTask(PhantomData)
+    ) -> Task<Self::Task<T>> {
+        NTask(PhantomData).into()
     }
 
     fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         _f: F,
-    ) -> impl Task<T> + 'static {
-        NTask(PhantomData)
-    }
-}
-
-#[async_trait]
-impl<T: Send + 'static> Task<T> for NTask<T> {}
-
-impl<T: Send + 'static> Future for NTask<T> {
-    type Output = T;
-
-    fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Poll::Pending
+    ) -> Task<Self::Task<T>> {
+        NTask(PhantomData).into()
     }
 }
 
@@ -96,26 +84,37 @@ impl Reactor for Noop {
     }
 }
 
+mod task {
+    use crate::util::TaskImpl;
+    use async_trait::async_trait;
+    use std::{
+        future::Future,
+        marker::PhantomData,
+        pin::Pin,
+        task::{Context, Poll},
+    };
+
+    /// A noop task
+    #[derive(Debug)]
+    pub struct NTask<T: Send + 'static>(pub(super) PhantomData<T>);
+
+    impl<T: Send + 'static> Unpin for NTask<T> {}
+
+    #[async_trait]
+    impl<T: Send + 'static> TaskImpl for NTask<T> {}
+
+    impl<T: Send + 'static> Future for NTask<T> {
+        type Output = T;
+
+        fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
+            Poll::Pending
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn dyn_compat() {
-        struct Test {
-            _executor: Box<dyn Executor>,
-            _reactor: Box<dyn Reactor<TcpStream = DummyIO>>,
-            _kit: Box<dyn RuntimeKit<TcpStream = DummyIO>>,
-            _task: Box<dyn Task<String>>,
-        }
-
-        let _ = Test {
-            _executor: Box::new(Noop),
-            _reactor: Box::new(Noop),
-            _kit: Box::new(Noop),
-            _task: Box::new(NTask(PhantomData)),
-        };
-    }
 
     #[test]
     fn auto_traits() {

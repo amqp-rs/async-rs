@@ -3,10 +3,9 @@
 use crate::{
     Runtime,
     sys::AsSysFd,
-    traits::{Executor, Reactor, RuntimeKit, Task},
-    util::{IOHandle, UnitFuture},
+    traits::{Executor, Reactor, RuntimeKit},
+    util::{IOHandle, Task, UnitFuture},
 };
-use async_trait::async_trait;
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use smol::{Async, Timer};
@@ -14,10 +13,10 @@ use std::{
     future::Future,
     io::{self, Read, Write},
     net::{SocketAddr, TcpStream},
-    pin::Pin,
-    task::{Context, Poll},
     time::{Duration, Instant},
 };
+
+use task::STask;
 
 /// Type alias for the smol runtime
 pub type SmolRuntime = Runtime<Smol>;
@@ -33,11 +32,11 @@ impl SmolRuntime {
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Smol;
 
-struct STask<T: Send + 'static>(Option<smol::Task<T>>);
-
 impl RuntimeKit for Smol {}
 
 impl Executor for Smol {
+    type Task<T: Send + 'static> = STask<T>;
+
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         smol::block_on(f)
     }
@@ -45,42 +44,15 @@ impl Executor for Smol {
     fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
-        STask(Some(smol::spawn(f)))
+    ) -> Task<Self::Task<T>> {
+        STask(Some(smol::spawn(f))).into()
     }
 
     fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
-        STask(Some(smol::unblock(f)))
-    }
-}
-
-#[async_trait]
-impl<T: Send + 'static> Task<T> for STask<T> {
-    async fn cancel(&mut self) -> Option<T> {
-        self.0.take()?.cancel().await
-    }
-
-    fn detach(&mut self) {
-        if let Some(task) = self.0.take() {
-            task.detach();
-        }
-    }
-}
-
-impl<T: Send + 'static> Drop for STask<T> {
-    fn drop(&mut self) {
-        self.detach()
-    }
-}
-
-impl<T: Send + 'static> Future for STask<T> {
-    type Output = T;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Pin::new(self.0.as_mut().expect("task canceled")).poll(cx)
+    ) -> Task<Self::Task<T>> {
+        STask(Some(smol::unblock(f))).into()
     }
 }
 
@@ -110,26 +82,44 @@ impl Reactor for Smol {
     }
 }
 
+mod task {
+    use crate::util::TaskImpl;
+    use async_trait::async_trait;
+    use std::{
+        future::Future,
+        pin::Pin,
+        task::{Context, Poll},
+    };
+
+    /// A smol task
+    #[derive(Debug)]
+    pub struct STask<T: Send + 'static>(pub(super) Option<smol::Task<T>>);
+
+    #[async_trait]
+    impl<T: Send + 'static> TaskImpl for STask<T> {
+        async fn cancel(&mut self) -> Option<T> {
+            self.0.take()?.cancel().await
+        }
+
+        fn detach(&mut self) {
+            if let Some(task) = self.0.take() {
+                task.detach();
+            }
+        }
+    }
+
+    impl<T: Send + 'static> Future for STask<T> {
+        type Output = T;
+
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            Pin::new(self.0.as_mut().expect("task canceled")).poll(cx)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn dyn_compat() {
-        struct Test {
-            _executor: Box<dyn Executor>,
-            _reactor: Box<dyn Reactor<TcpStream = Async<TcpStream>>>,
-            _kit: Box<dyn RuntimeKit<TcpStream = Async<TcpStream>>>,
-            _task: Box<dyn Task<String>>,
-        }
-
-        let _ = Test {
-            _executor: Box::new(Smol),
-            _reactor: Box::new(Smol),
-            _kit: Box::new(Smol),
-            _task: Box::new(STask(None)),
-        };
-    }
 
     #[test]
     fn auto_traits() {

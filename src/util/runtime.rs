@@ -1,6 +1,7 @@
 use crate::{
     sys::AsSysFd,
-    traits::{Executor, Reactor, RuntimeKit, Task},
+    traits::{Executor, Reactor, RuntimeKit},
+    util::Task,
 };
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
@@ -29,6 +30,8 @@ impl<E: Executor, R: Reactor> RuntimeParts<E, R> {
 impl<E: Executor + fmt::Debug, R: Reactor + fmt::Debug> RuntimeKit for RuntimeParts<E, R> {}
 
 impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
+    type Task<T: Send + 'static> = E::Task<T>;
+
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         self.executor.block_on(f)
     }
@@ -36,14 +39,14 @@ impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
     fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
+    ) -> Task<Self::Task<T>> {
         self.executor.spawn(f)
     }
 
     fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
+    ) -> Task<Self::Task<T>> {
         self.executor.spawn_blocking(f)
     }
 }

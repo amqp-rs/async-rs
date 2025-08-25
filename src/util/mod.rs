@@ -17,6 +17,9 @@ pub use io::*;
 mod runtime;
 pub use runtime::*;
 
+mod task;
+pub use task::*;
+
 #[cfg(feature = "tokio")]
 mod tokio;
 #[cfg(feature = "tokio")]

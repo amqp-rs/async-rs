@@ -1,10 +1,13 @@
 //! A collection of traits to define a common interface across executors
 
-use async_trait::async_trait;
+use crate::util::{Task, TaskImpl};
 use std::{future::Future, ops::Deref};
 
 /// A common interface for spawning futures on top of an executor
 pub trait Executor {
+    /// The type representing the tasks the are returned when spawning a Future on the executor
+    type Task<T: Send + 'static>: TaskImpl<Output = T> + Send + 'static;
+
     /// Block on a future until completion
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T
     where
@@ -14,7 +17,7 @@ pub trait Executor {
     fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static
+    ) -> Task<Self::Task<T>>
     where
         Self: Sized;
 
@@ -22,7 +25,7 @@ pub trait Executor {
     fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static
+    ) -> Task<Self::Task<T>>
     where
         Self: Sized;
 }
@@ -31,6 +34,8 @@ impl<E: Deref> Executor for E
 where
     E::Target: Executor + Sized,
 {
+    type Task<T: Send + 'static> = <E::Target as Executor>::Task<T>;
+
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         self.deref().block_on(f)
     }
@@ -38,36 +43,14 @@ where
     fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
+    ) -> Task<Self::Task<T>> {
         self.deref().spawn(f)
     }
 
     fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
+    ) -> Task<Self::Task<T>> {
         self.deref().spawn_blocking(f)
-    }
-}
-
-/// A common interface to wait for a Task completion, let it run n the background or cancel it.
-#[async_trait]
-pub trait Task<T: Send + 'static>: Future<Output = T> + Send + 'static {
-    /// Cancels the task and waits for it to stop running.
-    ///
-    /// Returns the task's output if it was completed just before it got canceled, or None if it
-    /// didn't complete.
-    async fn cancel(&mut self) -> Option<T> {
-        None
-    }
-
-    /// "Detach" the task from the current context to let it run in the background.
-    ///
-    /// Note that this is automatically called when dropping the Task so that it doesn't get
-    /// canceled.
-    fn detach(&mut self)
-    where
-        Self: Sized,
-    {
     }
 }

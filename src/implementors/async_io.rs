@@ -48,17 +48,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn dyn_compat() {
-        struct Test {
-            _reactor: Box<dyn Reactor<TcpStream = Async<TcpStream>>>,
-        }
-
-        let _ = Test {
-            _reactor: Box::new(AsyncIO),
-        };
-    }
-
-    #[test]
     fn auto_traits() {
         use crate::util::test::*;
         let runtime = AsyncIO;

@@ -3,9 +3,9 @@
 use crate::{
     Runtime,
     sys::AsSysFd,
-    traits::{Executor, Reactor, RuntimeKit, Task},
+    traits::{Executor, Reactor, RuntimeKit},
+    util::Task,
 };
-use async_trait::async_trait;
 use cfg_if::cfg_if;
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
@@ -24,6 +24,8 @@ use tokio::{
 };
 use tokio_stream::{StreamExt, wrappers::IntervalStream};
 use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
+
+use task::TTask;
 
 /// Type alias for the tokio runtime
 pub type TokioRuntime = Runtime<Tokio>;
@@ -93,11 +95,11 @@ impl Tokio {
     }
 }
 
-struct TTask<T: Send + 'static>(Option<tokio::task::JoinHandle<T>>);
-
 impl RuntimeKit for Tokio {}
 
 impl Executor for Tokio {
+    type Task<T: Send + 'static> = TTask<T>;
+
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         if let Some(runtime) = self.runtime.as_ref() {
             runtime.block_on(f)
@@ -111,44 +113,25 @@ impl Executor for Tokio {
     fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
+    ) -> Task<Self::Task<T>> {
         TTask(Some(if let Some(handle) = self.handle() {
             handle.spawn(f)
         } else {
             tokio::task::spawn(f)
         }))
+        .into()
     }
 
     fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,
-    ) -> impl Task<T> + 'static {
+    ) -> Task<Self::Task<T>> {
         TTask(Some(if let Some(handle) = self.handle() {
             handle.spawn_blocking(f)
         } else {
             tokio::task::spawn_blocking(f)
         }))
-    }
-}
-
-#[async_trait]
-impl<T: Send + 'static> Task<T> for TTask<T> {
-    async fn cancel(&mut self) -> Option<T> {
-        let task = self.0.take()?;
-        task.abort();
-        task.await.ok()
-    }
-}
-
-impl<T: Send + 'static> Future for TTask<T> {
-    type Output = T;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let task = self.0.as_mut().expect("task has been canceled");
-        match Pin::new(task).poll(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(res) => Poll::Ready(res.expect("task has been canceled")),
-        }
+        .into()
     }
 }
 
@@ -189,6 +172,41 @@ impl Reactor for Tokio {
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
         let _enter = self.enter();
         async move { Ok(TcpStream::connect(addr).await?.compat()) }
+    }
+}
+
+mod task {
+    use crate::util::TaskImpl;
+    use async_trait::async_trait;
+    use std::{
+        future::Future,
+        pin::Pin,
+        task::{Context, Poll},
+    };
+
+    /// A tokio task
+    #[derive(Debug)]
+    pub struct TTask<T: Send + 'static>(pub(super) Option<tokio::task::JoinHandle<T>>);
+
+    #[async_trait]
+    impl<T: Send + 'static> TaskImpl for TTask<T> {
+        async fn cancel(&mut self) -> Option<T> {
+            let task = self.0.take()?;
+            task.abort();
+            task.await.ok()
+        }
+    }
+
+    impl<T: Send + 'static> Future for TTask<T> {
+        type Output = T;
+
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            let task = self.0.as_mut().expect("task has been canceled");
+            match Pin::new(task).poll(cx) {
+                Poll::Pending => Poll::Pending,
+                Poll::Ready(res) => Poll::Ready(res.expect("task has been canceled")),
+            }
+        }
     }
 }
 
@@ -312,23 +330,6 @@ mod unix {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn dyn_compat() {
-        struct Test {
-            _executor: Box<dyn Executor>,
-            _reactor: Box<dyn Reactor<TcpStream = Compat<TcpStream>>>,
-            _kit: Box<dyn RuntimeKit<TcpStream = Compat<TcpStream>>>,
-            _task: Box<dyn Task<String>>,
-        }
-
-        let _ = Test {
-            _executor: Box::new(Tokio::default()),
-            _reactor: Box::new(Tokio::default()),
-            _kit: Box::new(Tokio::default()),
-            _task: Box::new(TTask(None)),
-        };
-    }
 
     #[test]
     fn auto_traits() {

@@ -11,9 +11,6 @@ pub fn block_on_tokio<T>(fut: impl Future<Output = io::Result<T>>) -> io::Result
     if let Ok(handle) = Handle::try_current() {
         handle.block_on(fut)
     } else {
-        tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()?
-            .block_on(fut)
+        tokio::runtime::Runtime::new()?.block_on(fut)
     }
 }

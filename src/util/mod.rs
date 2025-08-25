@@ -3,6 +3,9 @@
 mod addr;
 pub use addr::*;
 
+mod dummy;
+pub use dummy::*;
+
 mod future;
 pub use future::*;
 

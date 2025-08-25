@@ -72,6 +72,10 @@ required-features = ["tokio"]
 name = "send-recv"
 required-features = ["tokio"]
 
+[[test]]
+name = "tokio"
+required-features = ["tokio"]
+
 [package.metadata.docs.rs]
 all-features = true
 

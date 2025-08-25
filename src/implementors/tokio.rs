@@ -166,7 +166,7 @@ impl Reactor for Tokio {
                     tokio::io::unix::AsyncFd::new(socket)?,
                 ))
             } else {
-                Err::<windows::Dummy, _>(io::Error::other(
+                Err::<crate::util::DummyIO, _>(io::Error::other(
                     "Registering FD on tokio reactor is only supported on unix",
                 ))
             }
@@ -305,42 +305,6 @@ mod unix {
 
         fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<futures_io::Result<()>> {
             self.poll_flush(cx)
-        }
-    }
-}
-
-#[cfg(windows)]
-mod windows {
-    use super::*;
-    use futures_io::{AsyncRead, AsyncWrite};
-
-    pub(super) struct Dummy;
-
-    impl AsyncRead for Dummy {
-        fn poll_read(
-            self: Pin<&mut Self>,
-            cx: &mut Context<'_>,
-            buf: &mut [u8],
-        ) -> Poll<io::Result<usize>> {
-            Poll::Pending
-        }
-    }
-
-    impl AsyncWrite for Dummy {
-        fn poll_write(
-            self: Pin<&mut Self>,
-            cx: &mut Context<'_>,
-            buf: &[u8],
-        ) -> Poll<io::Result<usize>> {
-            Poll::Pending
-        }
-
-        fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-            Poll::Pending
-        }
-
-        fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-            Poll::Pending
         }
     }
 }

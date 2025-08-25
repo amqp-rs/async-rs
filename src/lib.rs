@@ -1,4 +1,5 @@
 #![deny(missing_docs, missing_debug_implementations, unsafe_code)]
+#![allow(clippy::manual_async_fn)]
 
 //! A Rust async runtime abstration library.
 //!
@@ -43,13 +44,6 @@ pub use runtime::*;
 pub mod traits;
 
 mod implementors;
-#[cfg(any(
-    feature = "async-global-executor",
-    feature = "async-io",
-    feature = "hickory-dns",
-    feature = "smol",
-    feature = "tokio"
-))]
 pub use implementors::*;
 
 pub mod util;

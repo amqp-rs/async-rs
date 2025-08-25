@@ -13,6 +13,9 @@ mod hickory;
 #[cfg(feature = "hickory-dns")]
 pub use hickory::*;
 
+mod noop;
+pub use noop::*;
+
 #[cfg(feature = "smol")]
 mod smol;
 #[cfg(feature = "smol")]

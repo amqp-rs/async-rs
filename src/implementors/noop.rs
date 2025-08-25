@@ -60,11 +60,7 @@ impl Executor for Noop {
 }
 
 #[async_trait]
-impl<T: Send + 'static> Task<T> for NTask<T> {
-    async fn cancel(&mut self) -> Option<T> {
-        None
-    }
-}
+impl<T: Send + 'static> Task<T> for NTask<T> {}
 
 impl<T: Send + 'static> Future for NTask<T> {
     type Output = T;

@@ -58,13 +58,17 @@ impl<T: Send + 'static> Task<T> for AGETask<T> {
     async fn cancel(&mut self) -> Option<T> {
         self.0.take()?.cancel().await
     }
+
+    fn detach(&mut self) {
+        if let Some(task) = self.0.take() {
+            task.detach();
+        }
+    }
 }
 
 impl<T: Send + 'static> Drop for AGETask<T> {
     fn drop(&mut self) {
-        if let Some(task) = self.0.take() {
-            task.detach();
-        }
+        self.detach();
     }
 }
 

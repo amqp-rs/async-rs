@@ -57,5 +57,17 @@ pub trait Task<T: Send + 'static>: Future<Output = T> + Send + 'static {
     ///
     /// Returns the task's output if it was completed just before it got canceled, or None if it
     /// didn't complete.
-    async fn cancel(&mut self) -> Option<T>;
+    async fn cancel(&mut self) -> Option<T> {
+        None
+    }
+
+    /// "Detach" the task from the current context to let it run in the background.
+    ///
+    /// Note that this is automatically called when dropping the Task so that it doesn't get
+    /// canceled.
+    fn detach(&mut self)
+    where
+        Self: Sized,
+    {
+    }
 }

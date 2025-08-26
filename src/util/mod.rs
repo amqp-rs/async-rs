@@ -3,6 +3,9 @@
 mod addr;
 pub use addr::*;
 
+mod block_on;
+pub use block_on::*;
+
 mod dummy;
 pub use dummy::*;
 

@@ -4,7 +4,7 @@ use crate::{
     Runtime,
     sys::AsSysFd,
     traits::{Executor, Reactor, RuntimeKit},
-    util::{DummyIO, DummyStream, Task},
+    util::{self, DummyIO, DummyStream, Task},
 };
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
@@ -40,7 +40,7 @@ impl Executor for Noop {
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         // We cannot fake something unless we require T: Default, which we don't want.
         // Let's get a minimalist implementation for this one.
-        futures_executor::block_on(f)
+        util::simple_block_on(f)
     }
 
     fn spawn<T: Send + 'static, F: Future<Output = T> + Send + 'static>(

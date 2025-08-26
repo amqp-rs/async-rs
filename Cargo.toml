@@ -24,7 +24,6 @@ tokio = ["dep:async-compat", "dep:tokio", "dep:tokio-stream", "async-global-exec
 async-trait = "^0.1.89"
 cfg-if = "^1.0"
 futures-core = "^0.3"
-futures-executor = "^0.3"
 futures-io = "^0.3"
 
 [dependencies.async-compat]

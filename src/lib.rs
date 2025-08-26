@@ -13,6 +13,8 @@
 //! ## Example
 //!
 //! ```rust
+//! # #[cfg(feature="tokio")]
+//! # {
 //! use async_rs::{Runtime, TokioRuntime, traits::*};
 //! use std::{io, time::Duration};
 //!
@@ -36,6 +38,7 @@
 //!     let rt = Runtime::tokio()?;
 //!     rt.block_on(tokio_main(&rt))
 //! }
+//! # }
 //! ```
 
 mod runtime;

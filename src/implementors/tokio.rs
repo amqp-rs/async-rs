@@ -6,6 +6,7 @@ use crate::{
     traits::{Executor, Reactor, RuntimeKit},
     util::Task,
 };
+use async_compat::{Compat, CompatExt};
 use cfg_if::cfg_if;
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
@@ -23,7 +24,6 @@ use tokio::{
     runtime::{EnterGuard, Handle, Runtime as TokioRT},
 };
 use tokio_stream::{StreamExt, wrappers::IntervalStream};
-use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 
 use task::TTask;
 

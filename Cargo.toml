@@ -18,7 +18,7 @@ async-global-executor = ["dep:async-global-executor"]
 async-io = ["dep:async-io", "async-global-executor?/async-io"]
 hickory-dns = ["dep:hickory-resolver", "tokio"] # hickory-dns only supports tokio as of now
 smol = ["dep:smol", "async-io"] # async-io required for implementing IoSafe
-tokio = ["dep:tokio", "dep:tokio-stream", "async-global-executor?/tokio", "hickory-resolver?/tokio"]
+tokio = ["dep:async-compat", "dep:tokio", "dep:tokio-stream", "async-global-executor?/tokio", "hickory-resolver?/tokio"]
 
 [dependencies]
 async-trait = "^0.1.89"
@@ -26,6 +26,10 @@ cfg-if = "^1.0"
 futures-core = "^0.3"
 futures-executor = "^0.3"
 futures-io = "^0.3"
+
+[dependencies.async-compat]
+version = "^0.2.5"
+optional = true
 
 [dependencies.async-global-executor]
 version = "^3.1"
@@ -55,11 +59,6 @@ features = ["net", "rt", "rt-multi-thread", "time"]
 [dependencies.tokio-stream]
 version = "^0.1"
 optional = true
-
-[dependencies.tokio-util]
-version = "^0.7"
-default-features = false
-features = ["compat"]
 
 [dev-dependencies.tokio]
 version = "^1.47"

@@ -24,7 +24,7 @@ pub fn simple_block_on<F: Future>(f: F) -> F::Output {
 }
 
 thread_local! {
-    static BUSY: AtomicBool = AtomicBool::new(false);
+    static BUSY: AtomicBool = const { AtomicBool::new(false) };
 }
 
 struct EnterGuard;

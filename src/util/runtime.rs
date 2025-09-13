@@ -53,6 +53,7 @@ impl<E: Executor, R: Reactor> Executor for RuntimeParts<E, R> {
 
 impl<E: Executor, R: Reactor> Reactor for RuntimeParts<E, R> {
     type TcpStream = R::TcpStream;
+    type Sleep = R::Sleep;
 
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -61,7 +62,7 @@ impl<E: Executor, R: Reactor> Reactor for RuntimeParts<E, R> {
         self.reactor.register(socket)
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
+    fn sleep(&self, dur: Duration) -> Self::Sleep {
         self.reactor.sleep(dur)
     }
 

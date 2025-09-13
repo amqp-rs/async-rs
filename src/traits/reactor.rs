@@ -15,6 +15,9 @@ pub trait Reactor {
     /// The type representing a TCP stream (after tcp_connect) for this reactor
     type TcpStream: AsyncRead + AsyncWrite + Send + Unpin + 'static;
 
+    /// The type representing a Sleep for this reactor
+    type Sleep: Future + Send + 'static;
+
     /// Register a synchronous handle, returning an asynchronous one
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -24,7 +27,7 @@ pub trait Reactor {
         Self: Sized;
 
     /// Sleep for the given duration
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static
+    fn sleep(&self, dur: Duration) -> Self::Sleep
     where
         Self: Sized;
 
@@ -69,6 +72,7 @@ where
     R::Target: Reactor + Sized,
 {
     type TcpStream = <<R as Deref>::Target as Reactor>::TcpStream;
+    type Sleep = <<R as Deref>::Target as Reactor>::Sleep;
 
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -77,7 +81,7 @@ where
         self.deref().register(socket)
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
+    fn sleep(&self, dur: Duration) -> Self::Sleep {
         self.deref().sleep(dur)
     }
 

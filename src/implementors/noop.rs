@@ -9,7 +9,7 @@ use crate::{
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
-    future::Future,
+    future::{self, Future, Ready},
     io::{self, Read, Write},
     marker::PhantomData,
     net::SocketAddr,
@@ -60,6 +60,7 @@ impl Executor for Noop {
 
 impl Reactor for Noop {
     type TcpStream = DummyIO;
+    type Sleep = Ready<()>;
 
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -68,8 +69,8 @@ impl Reactor for Noop {
         Ok(DummyIO)
     }
 
-    fn sleep(&self, _dur: Duration) -> impl Future<Output = ()> + Send + 'static {
-        async {}
+    fn sleep(&self, _dur: Duration) -> Self::Sleep {
+        future::ready(())
     }
 
     fn interval(&self, _dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {

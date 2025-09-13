@@ -22,6 +22,7 @@ use std::{
 use tokio::{
     net::TcpStream,
     runtime::{EnterGuard, Handle, Runtime as TokioRT},
+    time::Sleep,
 };
 use tokio_stream::{StreamExt, wrappers::IntervalStream};
 
@@ -137,6 +138,7 @@ impl Executor for Tokio {
 
 impl Reactor for Tokio {
     type TcpStream = Compat<TcpStream>;
+    type Sleep = Sleep;
 
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -156,7 +158,7 @@ impl Reactor for Tokio {
         }
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
+    fn sleep(&self, dur: Duration) -> Self::Sleep {
         let _enter = self.enter();
         tokio::time::sleep(dur)
     }

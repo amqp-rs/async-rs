@@ -69,6 +69,7 @@ impl<RK: RuntimeKit> Executor for Runtime<RK> {
 
 impl<RK: RuntimeKit> Reactor for Runtime<RK> {
     type TcpStream = <RK as Reactor>::TcpStream;
+    type Sleep = <RK as Reactor>::Sleep;
 
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -77,7 +78,7 @@ impl<RK: RuntimeKit> Reactor for Runtime<RK> {
         self.kit.register(socket)
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
+    fn sleep(&self, dur: Duration) -> Self::Sleep {
         self.kit.sleep(dur)
     }
 

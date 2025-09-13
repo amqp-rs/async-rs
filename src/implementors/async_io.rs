@@ -1,8 +1,4 @@
-use crate::{
-    sys::AsSysFd,
-    traits::Reactor,
-    util::{IOHandle, UnitFuture},
-};
+use crate::{sys::AsSysFd, traits::Reactor, util::IOHandle};
 use async_io::{Async, Timer};
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
@@ -19,6 +15,7 @@ pub struct AsyncIO;
 
 impl Reactor for AsyncIO {
     type TcpStream = Async<TcpStream>;
+    type Sleep = Timer;
 
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -27,8 +24,8 @@ impl Reactor for AsyncIO {
         Async::new(IOHandle::new(socket))
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
-        UnitFuture(Timer::after(dur))
+    fn sleep(&self, dur: Duration) -> Self::Sleep {
+        Timer::after(dur)
     }
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {

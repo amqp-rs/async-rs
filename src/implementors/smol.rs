@@ -4,7 +4,7 @@ use crate::{
     Runtime,
     sys::AsSysFd,
     traits::{Executor, Reactor, RuntimeKit},
-    util::{IOHandle, Task, UnitFuture},
+    util::{IOHandle, Task},
 };
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
@@ -58,6 +58,7 @@ impl Executor for Smol {
 
 impl Reactor for Smol {
     type TcpStream = Async<TcpStream>;
+    type Sleep = Timer;
 
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
@@ -66,8 +67,8 @@ impl Reactor for Smol {
         Async::new(IOHandle::new(socket))
     }
 
-    fn sleep(&self, dur: Duration) -> impl Future<Output = ()> + Send + 'static {
-        UnitFuture(Timer::after(dur))
+    fn sleep(&self, dur: Duration) -> Self::Sleep {
+        Timer::after(dur)
     }
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {

@@ -9,9 +9,6 @@ pub use block_on::*;
 mod dummy;
 pub use dummy::*;
 
-mod future;
-pub use future::*;
-
 #[cfg(feature = "async-io")]
 mod io;
 #[cfg(feature = "async-io")]

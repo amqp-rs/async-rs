@@ -10,7 +10,7 @@ documentation = "https://docs.rs/async-rs"
 keywords = ["async", "await", "futures", "executor"]
 categories = ["asynchronous", "concurrency"]
 license = "BSD-2-Clause"
-rust-version = "1.85.0"
+rust-version = "1.87.0"
 
 [features]
 default = ["tokio"]

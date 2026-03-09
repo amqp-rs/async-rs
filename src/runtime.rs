@@ -37,6 +37,17 @@ impl<RK: RuntimeKit> Runtime<RK> {
             addrs,
         }
     }
+
+    /// Check if an `std::io::Error` is a runtime shutdown error
+    // FIXME: move this to Reactor trait for next semver breaking release
+    pub fn is_runtime_shutdown_error(&self, err: &io::Error) -> bool {
+        #[cfg(feature = "tokio")]
+        if tokio::runtime::is_rt_shutdown_err(err) {
+            return true;
+        }
+        let _ = err;
+        false
+    }
 }
 
 impl<RK: RuntimeKit> From<RK> for Runtime<RK> {

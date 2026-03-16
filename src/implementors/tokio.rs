@@ -80,11 +80,7 @@ impl Tokio {
     }
 
     fn handle(&self) -> Option<Handle> {
-        self.runtime
-            .as_ref()
-            .map(|r| r.handle().clone())
-            .or_else(|| Handle::try_current().ok())
-            .or_else(|| self.handle.clone())
+        self.handle.clone().or_else(|| Handle::try_current().ok())
     }
 
     fn enter(&self) -> Option<EnterGuard<'_>> {

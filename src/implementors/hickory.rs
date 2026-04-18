@@ -2,11 +2,12 @@ use crate::{
     traits::AsyncToSocketAddrs,
     util::{self, SocketAddrsFromIpAddrs},
 };
-use hickory_resolver::{IntoName, Resolver, lookup_ip::LookupIpIntoIter};
+use hickory_resolver::{Resolver, proto::rr::IntoName};
 use std::{
     io,
-    net::{SocketAddr, ToSocketAddrs},
+    net::{IpAddr, SocketAddr, ToSocketAddrs},
     str::FromStr,
+    vec,
 };
 
 /// Perform async DNS resolution using hickory-dns
@@ -22,7 +23,7 @@ impl<H: IntoName + Send + 'static> HickoryToSocketAddrs<H> {
         Self { host, port }
     }
 
-    async fn lookup(self) -> io::Result<SocketAddrsFromIpAddrs<LookupIpIntoIter>> {
+    async fn lookup(self) -> io::Result<SocketAddrsFromIpAddrs<vec::IntoIter<IpAddr>>> {
         if !util::inside_tokio() {
             return Err(io::Error::other(
                 "hickory-dns is only supported in a tokio context",
@@ -30,10 +31,15 @@ impl<H: IntoName + Send + 'static> HickoryToSocketAddrs<H> {
         }
 
         Ok(SocketAddrsFromIpAddrs(
-            Resolver::builder_tokio()?
+            Resolver::builder_tokio()
+                .map_err(io::Error::other)?
                 .build()
+                .map_err(io::Error::other)?
                 .lookup_ip(self.host)
-                .await?
+                .await
+                .map_err(io::Error::other)?
+                .iter()
+                .collect::<Vec<_>>() // FIXME: don't collect if we get back into_iter
                 .into_iter(),
             self.port,
         ))
@@ -55,7 +61,7 @@ impl FromStr for HickoryToSocketAddrs<String> {
 }
 
 impl<T: IntoName + Clone + Send + 'static> ToSocketAddrs for HickoryToSocketAddrs<T> {
-    type Iter = SocketAddrsFromIpAddrs<LookupIpIntoIter>;
+    type Iter = SocketAddrsFromIpAddrs<vec::IntoIter<IpAddr>>;
 
     fn to_socket_addrs(&self) -> io::Result<Self::Iter> {
         util::block_on_tokio(self.clone().lookup())

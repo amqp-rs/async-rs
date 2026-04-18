@@ -133,7 +133,7 @@ dependencies = [
 
 [[package]]
 name = "async-rs"
-version = "0.8.3"
+version = "0.8.4"
 dependencies = [
  "async-compat",
  "async-global-executor",

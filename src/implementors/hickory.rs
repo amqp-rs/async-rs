@@ -2,13 +2,28 @@ use crate::{
     traits::AsyncToSocketAddrs,
     util::{self, SocketAddrsFromIpAddrs},
 };
-use hickory_resolver::{Resolver, proto::rr::IntoName};
+use hickory_resolver::{TokioResolver, proto::rr::IntoName};
 use std::{
     io,
     net::{IpAddr, SocketAddr, ToSocketAddrs},
     str::FromStr,
+    sync::OnceLock,
     vec,
 };
+
+static RESOLVER: OnceLock<TokioResolver> = OnceLock::new();
+
+fn get_or_init_resolver() -> io::Result<&'static TokioResolver> {
+    // FIXME: replace with RESOLVER.get_or_try_init(...) once it stabilises (rust#109737)
+    if let Some(r) = RESOLVER.get() {
+        return Ok(r);
+    }
+    let resolver = TokioResolver::builder_tokio()
+        .map_err(io::Error::other)?
+        .build()
+        .map_err(io::Error::other)?;
+    Ok(RESOLVER.get_or_init(|| resolver))
+}
 
 /// Perform async DNS resolution using hickory-dns
 #[derive(Debug, Clone)]
@@ -30,11 +45,10 @@ impl<H: IntoName + Send + 'static> HickoryToSocketAddrs<H> {
             ));
         }
 
+        let resolver = get_or_init_resolver()?;
+
         Ok(SocketAddrsFromIpAddrs(
-            Resolver::builder_tokio()
-                .map_err(io::Error::other)?
-                .build()
-                .map_err(io::Error::other)?
+            resolver
                 .lookup_ip(self.host)
                 .await
                 .map_err(io::Error::other)?

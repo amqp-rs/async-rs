@@ -10,8 +10,6 @@ jobs:
   build_and_test:
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.rust == 'nightly' }}
-    env:
-      RUSTFLAGS: -D warnings
     strategy:
       fail-fast: false
       matrix:
@@ -26,19 +24,6 @@ jobs:
             rust: 1.88.0
     steps:
       - uses: actions/checkout@v6
-
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: amqp-rs/actions/build@main
         with:
-          toolchain: ${{ matrix.rust }}
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Run cargo check
-        run: cargo check --all --bins --examples --tests --all-features
-
-      - name: Run cargo check (without dev-dependencies to catch missing feature flags)
-        if: matrix.rust == 'nightly'
-        run: cargo check -Z features=dev_dep
-
-      - name: Run cargo test
-        run: cargo test
+          rust: ${{ matrix.rust }}

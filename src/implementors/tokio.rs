@@ -7,7 +7,6 @@ use crate::{
     util::Task,
 };
 use async_compat::{Compat, CompatExt};
-use cfg_if::cfg_if;
 use futures_core::Stream;
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
@@ -103,7 +102,9 @@ impl Executor for Tokio {
         } else if let Some(handle) = self.handle() {
             handle.block_on(f)
         } else {
-            Handle::current().block_on(f)
+            Handle::try_current()
+                .expect("no tokio runtime: use Runtime::tokio() or Runtime::tokio_with_handle()")
+                .block_on(f)
         }
     }
 
@@ -141,16 +142,16 @@ impl Reactor for Tokio {
         socket: H,
     ) -> io::Result<impl AsyncRead + AsyncWrite + Send + Unpin + 'static> {
         let _enter = self.enter();
-        cfg_if! {
-            if #[cfg(unix)] {
-                Ok(unix::AsyncFdWrapper(
-                    tokio::io::unix::AsyncFd::new(socket)?,
-                ))
-            } else {
-                Err::<crate::util::DummyIO, _>(io::Error::other(
-                    "Registering FD on tokio reactor is only supported on unix",
-                ))
-            }
+        #[cfg(unix)]
+        {
+            Ok(unix::AsyncFdWrapper(tokio::io::unix::AsyncFd::new(socket)?))
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = socket;
+            Err::<crate::util::DummyIO, _>(io::Error::other(
+                "Registering FD on tokio reactor is only supported on unix",
+            ))
         }
     }
 

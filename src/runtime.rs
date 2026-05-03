@@ -44,6 +44,7 @@ impl<RK: RuntimeKit> Runtime<RK> {
         if tokio::runtime::is_rt_shutdown_err(err) {
             return true;
         }
+        #[cfg(not(feature = "tokio"))]
         let _ = err;
         false
     }

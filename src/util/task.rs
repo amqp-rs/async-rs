@@ -10,7 +10,7 @@ use std::{
 pub struct Task<I: TaskImpl>(I);
 
 impl<I: TaskImpl> Task<I> {
-    /// Cancel the task, returning data if it was alredy finished
+    /// Cancel the task, returning data if it was already finished
     pub async fn cancel(&mut self) -> Option<<Self as Future>::Output> {
         self.0.cancel().await
     }

@@ -21,7 +21,7 @@ pub trait Executor {
     where
         Self: Sized;
 
-    /// Convert a blocking task into a future, spawning it on a decicated thread pool
+    /// Convert a blocking task into a future, spawning it on a dedicated thread pool
     fn spawn_blocking<T: Send + 'static, F: FnOnce() -> T + Send + 'static>(
         &self,
         f: F,

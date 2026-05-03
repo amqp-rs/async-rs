@@ -58,7 +58,7 @@ pub trait Reactor {
         }
     }
 
-    /// Create a TcpStream by connecting to a remote host
+    /// Create a TcpStream by connecting to a specific pre-resolved address
     fn tcp_connect_addr(
         &self,
         addr: SocketAddr,

@@ -28,7 +28,7 @@ impl NoopRuntime {
     }
 }
 
-/// Dummy object implementing async common interfaces on top of smol
+/// Dummy object implementing async common interfaces on top of noop
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Noop;
 

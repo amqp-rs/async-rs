@@ -57,7 +57,7 @@ impl ThreadWaker {
     }
 
     fn park(&self) {
-        // Check with Ordering Release to make sure we're ran first.
+        // Check with Ordering Acquire to make sure we're ran first.
         // Better unpark once too much than park once too much.
         // Only park if we weren't already.
         if !self.parked.swap(true, Ordering::Acquire) {

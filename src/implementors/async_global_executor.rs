@@ -18,7 +18,7 @@ pub type AGERuntime = Runtime<RuntimeParts<AsyncGlobalExecutor, AsyncIO>>;
 
 #[cfg(feature = "async-io")]
 impl AGERuntime {
-    /// Create a new SmolRuntime
+    /// Create a new AGERuntime
     pub fn async_global_executor() -> Self {
         Self::new(RuntimeParts::new(AsyncGlobalExecutor, AsyncIO))
     }

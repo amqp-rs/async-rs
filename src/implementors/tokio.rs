@@ -13,9 +13,7 @@ use std::{
     future::Future,
     io::{self, Read, Write},
     net::SocketAddr,
-    pin::Pin,
     sync::Arc,
-    task::{Context, Poll},
     time::{Duration, Instant},
 };
 use tokio::{
@@ -213,7 +211,11 @@ mod task {
 mod unix {
     use super::*;
     use futures_io::{AsyncRead, AsyncWrite};
-    use std::io::{IoSlice, IoSliceMut};
+    use std::{
+        io::{IoSlice, IoSliceMut},
+        pin::Pin,
+        task::{Context, Poll},
+    };
     use tokio::io::unix::AsyncFd;
 
     pub(super) struct AsyncFdWrapper<H: Read + Write + AsSysFd>(pub(super) AsyncFd<H>);

@@ -1,16 +1,15 @@
 //! async-global-executor implementation of async runtime definition traits
 
 use crate::{
-    Runtime,
     traits::Executor,
-    util::{RuntimeParts, Task},
+    util::Task,
 };
 use std::future::Future;
 
 use task::AGETask;
 
 #[cfg(feature = "async-io")]
-use crate::AsyncIO;
+use crate::{AsyncIO, Runtime, util::RuntimeParts};
 
 /// Type alias for the async-global-executor runtime
 #[cfg(feature = "async-io")]

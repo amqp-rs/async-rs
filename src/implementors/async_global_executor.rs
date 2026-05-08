@@ -1,9 +1,6 @@
 //! async-global-executor implementation of async runtime definition traits
 
-use crate::{
-    traits::Executor,
-    util::Task,
-};
+use crate::{traits::Executor, util::Task};
 use std::future::Future;
 
 use task::AGETask;

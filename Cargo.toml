@@ -1,13 +1,13 @@
 [package]
 name = "async-rs"
-version = "0.8.5"
+version = "0.8.6"
 edition = "2024"
 authors = ["Marc-Antoine Perennou <Marc-Antoine@Perennou.com>"]
 description = "Async runtime abstraction"
 repository = "https://github.com/amqp-rs/async-rs"
 readme = "README.md"
 documentation = "https://docs.rs/async-rs"
-keywords = ["async", "await", "futures", "executor"]
+keywords = ["async", "runtime", "futures", "executor"]
 categories = ["asynchronous", "concurrency"]
 license = "BSD-2-Clause"
 rust-version = "1.88.0"
@@ -76,6 +76,3 @@ required-features = ["tokio"]
 
 [package.metadata.docs.rs]
 all-features = true
-
-[badges]
-maintenance = { status = "actively-developed" }

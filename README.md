@@ -4,10 +4,10 @@
 [![Build status](https://github.com/amqp-rs/async-rs/workflows/Build%20and%20test/badge.svg)](https://github.com/amqp-rs/async-rs/actions)
 [![Downloads](https://img.shields.io/crates/d/async-rs.svg)](https://crates.io/crates/async-rs)
 [![Dependency Status](https://deps.rs/repo/github/amqp-rs/async-rs/status.svg)](https://deps.rs/repo/github/amqp-rs/async-rs)
-[![LICENSE](https://img.shields.io/github/license/amqp-rs/async-rs)](LICENSE)
+[![LICENSE](https://img.shields.io/crates/l/async-rs)](LICENSE)
 
  <strong>
-   A Rust async runtime abstration library.
+   A Rust async runtime abstraction library.
  </strong>
 
 </div>

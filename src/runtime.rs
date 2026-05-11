@@ -30,7 +30,7 @@ impl<RK: RuntimeKit> Runtime<RK> {
         addrs: A,
     ) -> SocketAddrsResolver<'_, RK, A>
     where
-        <A as std::net::ToSocketAddrs>::Iter: Send + 'static,
+        <A as ToSocketAddrs>::Iter: Send + 'static,
     {
         SocketAddrsResolver {
             runtime: self,

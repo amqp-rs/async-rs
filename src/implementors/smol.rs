@@ -79,7 +79,11 @@ impl Reactor for Smol {
         &self,
         addr: SocketAddr,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
-        Async::<TcpStream>::connect(addr)
+        async move {
+            let stream = Async::<TcpStream>::connect(addr).await?;
+            stream.get_ref().set_nodelay(true)?;
+            Ok(stream)
+        }
     }
 }
 

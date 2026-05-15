@@ -168,7 +168,11 @@ impl Reactor for Tokio {
         addr: SocketAddr,
     ) -> impl Future<Output = io::Result<Self::TcpStream>> + Send + 'static {
         let _enter = self.enter();
-        async move { Ok(TcpStream::connect(addr).await?.compat()) }
+        async move {
+            let stream = TcpStream::connect(addr).await?;
+            stream.set_nodelay(true)?;
+            Ok(stream.compat())
+        }
     }
 }
 

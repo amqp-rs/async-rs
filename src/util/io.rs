@@ -64,6 +64,9 @@ impl<H: Read + Write + AsSysFd + Send + 'static> fmt::Debug for IOHandle<H> {
     }
 }
 
+// SAFETY: IOHandle wraps a raw I/O handle (H: AsSysFd). All I/O goes through
+// the inner H, which itself implements Read + Write, so async-io can safely
+// issue syscalls on the borrowed fd without data races.
 #[allow(unsafe_code)]
 #[cfg(feature = "async-io")]
 unsafe impl<H: Read + Write + AsSysFd + Send + 'static> async_io::IoSafe for IOHandle<H> {}

@@ -117,7 +117,10 @@ mod task {
         type Output = T;
 
         fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-            Pin::new(self.0.as_mut().expect("task canceled")).poll(cx)
+            match self.0.as_mut() {
+                None => Poll::Pending,
+                Some(task) => Pin::new(task).poll(cx),
+            }
         }
     }
 }

@@ -202,10 +202,13 @@ mod task {
         type Output = T;
 
         fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-            let task = self.0.as_mut().expect("task has been canceled");
-            match Pin::new(task).poll(cx) {
-                Poll::Pending => Poll::Pending,
-                Poll::Ready(res) => Poll::Ready(res.expect("task has been canceled")),
+            match self.0.as_mut() {
+                None => Poll::Pending,
+                Some(task) => match Pin::new(task).poll(cx) {
+                    Poll::Pending => Poll::Pending,
+                    Poll::Ready(Ok(res)) => Poll::Ready(res),
+                    Poll::Ready(Err(_)) => Poll::Pending,
+                },
             }
         }
     }

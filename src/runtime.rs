@@ -18,7 +18,7 @@ use std::{
 /// domain-name resolution ([`Runtime::to_socket_addrs`]) and runtime-shutdown
 /// error detection ([`Runtime::is_runtime_shutdown_error`]).
 ///
-/// Concrete type aliases — [`NoopRuntime`], [`SmolRuntime`], [`TokioRuntime`] — are
+/// Concrete type aliases — `NoopRuntime`, `SmolRuntime`, `TokioRuntime` — are
 /// provided for each built-in backend and are the usual entry points.
 #[derive(Clone, Debug)]
 pub struct Runtime<RK: RuntimeKit> {

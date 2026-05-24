@@ -6,5 +6,5 @@ use crate::traits::{Executor, Reactor};
 /// block on futures) and a [`Reactor`] (can perform async I/O and timers) and is
 /// [`Debug`](std::fmt::Debug). This trait has no methods of its own; it exists
 /// purely as a convenient single bound used by [`Runtime`](crate::Runtime) and
-/// [`RuntimeParts`](crate::RuntimeParts).
+/// [`RuntimeParts`](crate::util::RuntimeParts).
 pub trait RuntimeKit: Executor + Reactor + std::fmt::Debug {}

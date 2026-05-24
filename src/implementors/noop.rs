@@ -23,6 +23,7 @@ pub type NoopRuntime = Runtime<Noop>;
 
 impl NoopRuntime {
     /// Create a new NoopRuntime
+    #[must_use]
     pub fn noop() -> Self {
         Self::new(Noop)
     }

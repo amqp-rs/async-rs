@@ -35,11 +35,13 @@ impl TokioRuntime {
     }
 
     /// Create a new TokioRuntime and bind it to the current tokio runtime by default.
+    #[must_use]
     pub fn tokio_current() -> Self {
         Self::new(Tokio::current())
     }
 
     /// Create a new TokioRuntime and bind it to the tokio runtime associated to this handle by default.
+    #[must_use]
     pub fn tokio_with_handle(handle: Handle) -> Self {
         Self::new(Tokio::default().with_handle(handle))
     }
@@ -59,6 +61,7 @@ pub struct Tokio {
 
 impl Tokio {
     /// Bind to the tokio Runtime associated to this handle by default.
+    #[must_use]
     pub fn with_handle(mut self, handle: Handle) -> Self {
         self.handle = Some(handle);
         self
@@ -72,6 +75,7 @@ impl Tokio {
     }
 
     /// Bind to the current tokio Runtime by default.
+    #[must_use]
     pub fn current() -> Self {
         Self::default().with_handle(Handle::current())
     }

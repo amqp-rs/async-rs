@@ -2,6 +2,7 @@ use std::{future::Future, io};
 use tokio::runtime::Handle;
 
 /// Check whether we're in a tokio context or not
+#[must_use]
 pub fn inside_tokio() -> bool {
     Handle::try_current().is_ok()
 }

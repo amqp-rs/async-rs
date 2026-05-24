@@ -64,7 +64,7 @@ impl Tokio {
         self
     }
 
-    /// Bind to the tokio Runtime associated to this handle by default.
+    /// Bind to this tokio runtime by default.
     pub fn with_runtime(mut self, runtime: TokioRT) -> Self {
         let handle = runtime.handle().clone();
         self.runtime = Some(Arc::new(runtime));

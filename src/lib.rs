@@ -9,14 +9,23 @@
 
 //! A Rust async runtime abstraction library.
 //!
-//! ## Features
+//! Provides a unified [`Runtime`] enum and a set of [`traits`]
+//! (`Executor`, `Reactor`, `Dns`, …) that abstract over Tokio, smol, and
+//! async-global-executor. Applications select exactly one runtime via feature
+//! flags; library crates depend on the trait objects and remain
+//! runtime-agnostic.
 //!
-//! - tokio: enable the tokio implementation *(default)*
-//! - smol: enable the smol implementation
-//! - async-global-executor: enable the async-global-executor implementation
-//! - async-io: enable the async-io reactor implementation
+//! # Feature flags
 //!
-//! ## Example
+//! | Flag | Notes |
+//! |------|-------|
+//! | `tokio` *(default)* | Tokio runtime |
+//! | `smol` | smol executor |
+//! | `async-global-executor` | async-global-executor |
+//! | `async-io` | async-io reactor (required by `smol`) |
+//! | `hickory-dns` | Hickory DNS resolver (tokio only) |
+//!
+//! # Example
 //!
 //! ```rust
 //! # #[cfg(feature="tokio")]

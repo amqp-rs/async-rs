@@ -13,7 +13,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// Wrapper around separate Executor and Reactor implementing RuntimeKit
+/// A [`RuntimeKit`] composed of independent [`Executor`] and [`Reactor`] instances.
+///
+/// Use this when you want to pair two existing implementations that were not originally
+/// designed as a single unit — for example a custom executor with a smol reactor.
+/// For the common case where both sides come from the same backend, the concrete
+/// runtime aliases (`SmolRuntime`, `TokioRuntime`, …) are simpler.
 #[derive(Clone, Debug)]
 pub struct RuntimeParts<E: Executor, R: Reactor> {
     executor: E,

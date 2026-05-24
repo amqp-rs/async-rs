@@ -28,7 +28,7 @@ impl SmolRuntime {
     }
 }
 
-/// Dummy object implementing async common interfaces on top of smol
+/// The [`RuntimeKit`] implementation backed by the smol async runtime
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Smol;
 

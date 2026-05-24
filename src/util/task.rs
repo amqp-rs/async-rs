@@ -36,7 +36,7 @@ impl<I: TaskImpl> Drop for Task<I> {
     }
 }
 
-/// A common interface to wait for a Task completion, let it run n the background or cancel it.
+/// A common interface to wait for a Task completion, let it run in the background or cancel it.
 #[async_trait]
 pub trait TaskImpl: Future + Send + Unpin + 'static {
     /// Cancels the task and waits for it to stop running.

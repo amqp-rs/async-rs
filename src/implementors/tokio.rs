@@ -29,7 +29,7 @@ use task::TTask;
 pub type TokioRuntime = Runtime<Tokio>;
 
 impl TokioRuntime {
-    /// Create a new TokioRuntime and bind it to this tokio runtime.
+    /// Create a new TokioRuntime backed by a freshly created tokio multi-threaded runtime.
     pub fn tokio() -> io::Result<Self> {
         Ok(Self::tokio_with_runtime(TokioRT::new()?))
     }
@@ -50,7 +50,7 @@ impl TokioRuntime {
     }
 }
 
-/// Dummy object implementing async common interfaces on top of tokio
+/// The [`RuntimeKit`] implementation backed by the tokio async runtime
 #[derive(Default, Clone, Debug)]
 pub struct Tokio {
     handle: Option<Handle>,

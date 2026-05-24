@@ -12,7 +12,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// A full-featured Runtime implementation
+/// A full-featured async runtime that combines an executor and a reactor.
+///
+/// `Runtime<RK>` wraps any [`RuntimeKit`] and adds higher-level helpers such as
+/// domain-name resolution ([`Runtime::to_socket_addrs`]) and runtime-shutdown
+/// error detection ([`Runtime::is_runtime_shutdown_error`]).
+///
+/// Concrete type aliases — [`NoopRuntime`], [`SmolRuntime`], [`TokioRuntime`] — are
+/// provided for each built-in backend and are the usual entry points.
 #[derive(Clone, Debug)]
 pub struct Runtime<RK: RuntimeKit> {
     kit: RK,

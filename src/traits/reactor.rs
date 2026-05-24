@@ -15,7 +15,7 @@ pub trait Reactor {
     /// The type representing a TCP stream (after tcp_connect) for this reactor
     type TcpStream: AsyncRead + AsyncWrite + Send + Unpin + 'static;
 
-    /// The type representing a Sleep for this reactor
+    /// A future that completes after a requested duration has elapsed (see [`Reactor::sleep`])
     type Sleep: Future + Send + 'static;
 
     /// Register a synchronous handle, returning an asynchronous one

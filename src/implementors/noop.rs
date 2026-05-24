@@ -28,7 +28,7 @@ impl NoopRuntime {
     }
 }
 
-/// Dummy object implementing async common interfaces on top of noop
+/// A no-op [`RuntimeKit`] implementation that never actually executes tasks or I/O
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Noop;
 

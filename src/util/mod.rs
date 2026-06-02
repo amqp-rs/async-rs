@@ -9,6 +9,12 @@ pub use block_on::*;
 mod dummy;
 pub use dummy::*;
 
+mod join;
+pub use join::*;
+
+mod split;
+pub use split::*;
+
 #[cfg(feature = "async-io")]
 mod io;
 #[cfg(feature = "async-io")]

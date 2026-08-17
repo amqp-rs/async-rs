@@ -19,9 +19,10 @@ pub fn join<A: Future, B: Future>(a: A, b: B) -> Join<A, B> {
 
 /// Drive two fallible futures concurrently, short-circuiting on the first error.
 ///
-/// On the first `Err`, the other future is dropped (cancelled) and the error returned; otherwise
+/// On the first `Err`, that error is returned without polling the other future again; otherwise
 /// both `Ok` values are returned once both complete. Useful for "run these two halves until one of
-/// them fails, then tear both down".
+/// them fails, then tear both down": the unfinished half is cancelled when the caller drops the
+/// [`TryJoin`], which is what dropping this future on the spot amounts to.
 pub fn try_join<T1, T2, E, A, B>(a: A, b: B) -> TryJoin<A, B>
 where
     A: Future<Output = Result<T1, E>>,
@@ -67,6 +68,16 @@ impl<F: Future> MaybeDone<F> {
     }
 }
 
+impl<T, E, F: Future<Output = Result<T, E>>> MaybeDone<F> {
+    /// Poll the inner future, taking its error out if that is what it completed with.
+    fn poll_err(&mut self, cx: &mut Context<'_>) -> Option<E> {
+        if !self.poll(cx) || !matches!(self.output, Some(Err(_))) {
+            return None;
+        }
+        self.take().err()
+    }
+}
+
 impl<F: Future> fmt::Debug for MaybeDone<F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MaybeDone")
@@ -76,10 +87,21 @@ impl<F: Future> fmt::Debug for MaybeDone<F> {
 }
 
 /// Future returned by [`join`].
-#[derive(Debug)]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct Join<A: Future, B: Future> {
     a: MaybeDone<A>,
     b: MaybeDone<B>,
+}
+
+// Written out rather than derived: a derive would ask for `A: Debug, B: Debug`, which the async
+// blocks these are built from never satisfy.
+impl<A: Future, B: Future> fmt::Debug for Join<A, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Join")
+            .field("a", &self.a)
+            .field("b", &self.b)
+            .finish()
+    }
 }
 
 impl<A: Future, B: Future> Future for Join<A, B> {
@@ -102,10 +124,19 @@ impl<A: Future, B: Future> Future for Join<A, B> {
 impl<A: Future, B: Future> Unpin for Join<A, B> {}
 
 /// Future returned by [`try_join`].
-#[derive(Debug)]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct TryJoin<A: Future, B: Future> {
     a: MaybeDone<A>,
     b: MaybeDone<B>,
+}
+
+impl<A: Future, B: Future> fmt::Debug for TryJoin<A, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TryJoin")
+            .field("a", &self.a)
+            .field("b", &self.b)
+            .finish()
+    }
 }
 
 impl<A: Future, B: Future> Unpin for TryJoin<A, B> {}
@@ -122,15 +153,11 @@ where
 
         // Poll both, short-circuiting the moment one completes with an error (which drops — cancels
         // — the other when `this` is dropped by the caller).
-        if this.a.poll(cx)
-            && let Some(Err(_)) = this.a.output.as_ref()
-        {
-            return Poll::Ready(Err(this.a.take().err().expect("checked Err")));
+        if let Some(err) = this.a.poll_err(cx) {
+            return Poll::Ready(Err(err));
         }
-        if this.b.poll(cx)
-            && let Some(Err(_)) = this.b.output.as_ref()
-        {
-            return Poll::Ready(Err(this.b.take().err().expect("checked Err")));
+        if let Some(err) = this.b.poll_err(cx) {
+            return Poll::Ready(Err(err));
         }
 
         if this.a.is_done() && this.b.is_done() {
@@ -161,6 +188,19 @@ mod tests {
                 Poll::Pending
             }
         })
+    }
+
+    // The types must stay Debug for the futures they are actually built from, which a derived
+    // impl would not manage: async blocks are not Debug.
+    #[test]
+    fn combinators_are_debug_over_async_blocks() {
+        fn debug<T: fmt::Debug>(t: &T) -> String {
+            format!("{t:?}")
+        }
+        debug(&join(async { 1u8 }, async { 2u8 }));
+        debug(&try_join(async { Ok::<u8, ()>(1) }, async {
+            Ok::<u8, ()>(2)
+        }));
     }
 
     #[test]

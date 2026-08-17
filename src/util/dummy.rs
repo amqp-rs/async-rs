@@ -8,6 +8,9 @@ use std::{
 };
 
 /// A dummy struct implementing Async IO traits
+///
+/// Every operation is `Poll::Pending`, forever: nothing is ever read, written, flushed or closed.
+/// No waker is registered either, so a task waiting on one cannot even be woken to give up.
 #[derive(Debug)]
 pub struct DummyIO;
 
@@ -40,6 +43,9 @@ impl AsyncWrite for DummyIO {
 }
 
 /// A dummy struct implementing Stream
+///
+/// Like [`DummyIO`], it is `Poll::Pending` forever and registers no waker: the stream neither
+/// yields an item nor ends.
 #[derive(Debug)]
 pub struct DummyStream<T>(pub PhantomData<T>);
 

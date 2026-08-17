@@ -32,7 +32,13 @@ async fn tokio_main(rt: &TokioRuntime) -> io::Result<()> {
     let listener = listener(rt).await?;
     let sender = sender(rt).await?;
     let stream = rt
-        .spawn_blocking(move || listener.incoming().next().unwrap())
+        .spawn_blocking(move || {
+            let stream = listener.incoming().next().unwrap()?;
+            // The tokio reactor takes this as given rather than doing it itself: a blocking socket
+            // would block the executor thread inside the read instead of reporting WouldBlock.
+            stream.set_nonblocking(true)?;
+            io::Result::Ok(stream)
+        })
         .await?;
     let mut stream = rt.register(stream)?;
     let mut buf = vec![0u8; 13];

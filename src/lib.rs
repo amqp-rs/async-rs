@@ -9,7 +9,7 @@
 
 //! A Rust async runtime abstraction library.
 //!
-//! Provides a unified [`Runtime`] enum and a set of [`traits`]
+//! Provides a unified [`Runtime`] type and a set of [`traits`]
 //! (`Executor`, `Reactor`, `Dns`, …) that abstract over Tokio, smol, and
 //! async-global-executor. Applications select exactly one runtime via feature
 //! flags; library crates depend on the trait objects and remain
@@ -55,6 +55,11 @@
 //! }
 //! # }
 //! ```
+//!
+//! Note that the `io::Result` above is the *task's own* output: awaiting a
+//! [`Task`](util::Task) leaves no room to report that the task itself failed,
+//! so a task which panicked resumes its panic in the awaiting task, and
+//! awaiting one which was canceled, or whose runtime went away, panics too.
 
 mod runtime;
 pub use runtime::*;

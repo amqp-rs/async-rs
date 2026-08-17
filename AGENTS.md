@@ -59,6 +59,10 @@ Whichever way a runtime turns out to be missing, the message is `NO_RUNTIME`: th
 
 `Task<I: TaskImpl>` (`src/util/task.rs`) wraps runtime-specific task handles. Dropping a `Task` **detaches** it (lets it run in the background); explicit `.cancel()` is required to abort. This is intentional — see the `Drop` impl.
 
+Awaiting a `Task` yields its output, which leaves no room to report a failure, so on tokio, smol and async-global-executor a failed task **panics in the awaiting task**: one which panicked resumes its panic, and one which was canceled, or whose runtime went away, panics too. `Noop` is the exception — it runs nothing, so its tasks simply never complete. `.cancel()` takes `&mut self`, so awaiting afterwards is expressible and panics rather than failing to compile; the same goes for a `.cancel()` which was itself dropped before it completed, since it gives up the underlying handle on its first poll.
+
+`.cancel()` itself is the other exception: it returns `Option<T>`, so on all three backends a task which panicked comes back as `None`, indistinguishable from one which was simply cancelled in time. That is a gap in the trait, not a backend bug — `async-task`'s own `FallibleTask` does the same — and closing it needs the output type to have room for a failure (see `FIXME.md`).
+
 ### Key patterns
 
 - **Deref forwarding**: `Executor` and `Reactor` are auto-implemented for `Deref` targets, so `Arc<Runtime>`, `&Runtime`, etc. all work without extra boilerplate.

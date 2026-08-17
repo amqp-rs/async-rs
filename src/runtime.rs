@@ -46,6 +46,11 @@ impl<RK: RuntimeKit> Runtime<RK> {
     }
 
     /// Check if an `std::io::Error` is a runtime shutdown error
+    ///
+    /// Only tokio's shutdown error is recognised, and it is recognised by its value alone: no
+    /// runtime is consulted, so the answer does not depend on which kit backs this `Runtime` nor
+    /// on where the error came from. What this does *not* do is ask the kit about its own
+    /// shutdown errors, so a `SmolRuntime` gets `false` for anything smol-specific.
     pub fn is_runtime_shutdown_error(&self, err: &io::Error) -> bool {
         #[cfg(feature = "tokio")]
         if tokio::runtime::is_rt_shutdown_err(err) {

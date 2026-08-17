@@ -10,7 +10,7 @@
 
 </div>
 
-Provides a unified `Runtime` enum and a `traits` module (`Executor`, `Reactor`,
+Provides a unified `Runtime` type and a `traits` module (`Executor`, `Reactor`,
 `Dns`, …) that abstract over Tokio, smol, and async-global-executor.
 Applications select exactly one runtime via feature flags; library crates
 depend on the trait objects and remain runtime-agnostic.
@@ -52,3 +52,8 @@ fn main() -> io::Result<()> {
     rt.block_on(tokio_main(&rt))
 }
 ```
+
+Note that the `io::Result` above is the *task's own* output: awaiting a task
+leaves no room to report that the task itself failed, so a task which panicked
+resumes its panic in the awaiting task, and awaiting one which was canceled, or
+whose runtime went away, panics too.

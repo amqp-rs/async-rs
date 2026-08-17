@@ -26,6 +26,10 @@ impl<I: TaskImpl> Task<I> {
     ///
     /// This gives up the underlying task, so the `Task` has nothing left to wait for: see the
     /// type-level docs for what awaiting it afterwards does.
+    ///
+    /// `None` means the task did not complete, and does not say why: one which panicked comes back
+    /// as `None` here rather than resuming its panic the way awaiting it would. The output type
+    /// has no room to tell the two apart, on any of the backends.
     pub async fn cancel(&mut self) -> Option<<Self as Future>::Output> {
         self.0.cancel().await
     }

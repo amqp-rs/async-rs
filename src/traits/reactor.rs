@@ -19,6 +19,13 @@ pub trait Reactor {
     type Sleep: Future + Send + 'static;
 
     /// Register a synchronous handle, returning an asynchronous one
+    ///
+    /// Whether the handle has to be in non-blocking mode already depends on the reactor: the
+    /// `async-io` based ones set it themselves, while the tokio one requires the caller to have
+    /// done so. Nothing checks, and getting it wrong is quiet: on a readiness notification that
+    /// does not pan out, or a write into a full send buffer, the read or write syscall blocks the
+    /// executor thread instead of reporting `WouldBlock`, stalling every task on it with no error
+    /// to go on. Set it yourself to stay portable across reactors.
     fn register<H: Read + Write + AsSysFd + Send + 'static>(
         &self,
         socket: H,

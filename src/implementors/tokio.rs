@@ -185,6 +185,7 @@ mod task {
     use async_trait::async_trait;
     use std::{
         future::Future,
+        panic,
         pin::Pin,
         task::{Context, Poll},
     };
@@ -206,13 +207,26 @@ mod task {
         type Output = T;
 
         fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-            match self.0.as_mut() {
-                None => Poll::Pending,
-                Some(task) => match Pin::new(task).poll(cx) {
-                    Poll::Pending => Poll::Pending,
-                    Poll::Ready(Ok(res)) => Poll::Ready(res),
-                    Poll::Ready(Err(_)) => Poll::Pending,
-                },
+            let task = self
+                .0
+                .as_mut()
+                .expect("Task polled after it was canceled or completed");
+            let res = match Pin::new(task).poll(cx) {
+                Poll::Pending => return Poll::Pending,
+                Poll::Ready(res) => res,
+            };
+
+            // Drop the handle now that it has completed: polling it again would trip tokio's own
+            // "JoinHandle polled after completion" assertion.
+            self.0 = None;
+
+            match res {
+                Ok(res) => Poll::Ready(res),
+                // Our Output is T, so a failed task has no value to yield. Report it the way
+                // async-task (and thus the smol and async-global-executor backends) already does
+                // rather than stalling forever on a Pending nobody will ever wake.
+                Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
+                Err(err) => panic!("Task did not complete: {err}"),
             }
         }
     }
@@ -350,5 +364,37 @@ mod tests {
         assert_send(&runtime);
         assert_sync(&runtime);
         assert_clone(&runtime);
+    }
+
+    // A failed task used to resolve to a Pending nobody would ever wake, hanging the caller
+    // forever. Both of these must now come back, panicking, in bounded time.
+    #[test]
+    fn panicking_task_does_not_hang() {
+        let res = crate::util::test::with_timeout(|| {
+            let runtime = Runtime::tokio().unwrap();
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                runtime.block_on(runtime.spawn(async { panic!("boom") }))
+            }))
+        });
+        // Down to the payload: asserting only that something panicked would also pass if the
+        // panic were a fresh one of our own rather than the task's, resumed.
+        assert_eq!(
+            res.expect_err("task panic").downcast_ref::<&str>(),
+            Some(&"boom")
+        );
+    }
+
+    #[test]
+    fn panicking_blocking_task_does_not_hang() {
+        let res = crate::util::test::with_timeout(|| {
+            let runtime = Runtime::tokio().unwrap();
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                runtime.block_on(runtime.spawn_blocking(|| -> u32 { panic!("boom") }))
+            }))
+        });
+        assert_eq!(
+            res.expect_err("task panic").downcast_ref::<&str>(),
+            Some(&"boom")
+        );
     }
 }

@@ -6,11 +6,26 @@ use std::{
 };
 
 /// A wrapper around implementation-specific tasks that implement the TaskImpl trait
+///
+/// Awaiting a `Task` yields the task's output. That output type leaves no room to report a
+/// failure, so on the backends which can detect one — tokio, smol and async-global-executor — a
+/// task which panicked resumes its panic in the awaiting task, and awaiting one which was
+/// canceled, or whose runtime went away, panics too. [`Noop`](crate::Noop) is the exception: it
+/// runs nothing, and its tasks simply never complete.
+///
+/// Note that `cancel` takes `&mut self`, so awaiting a `Task` after canceling it is expressible
+/// and panics rather than failing to compile. The same goes for a `cancel` which was itself
+/// dropped before it completed — in a `select!`, or a [`TryJoin`](crate::util::TryJoin) which
+/// short-circuited: it has already given up the underlying task by then, so the `Task` is spent
+/// even though no cancellation result was ever handed back.
 #[derive(Debug)]
 pub struct Task<I: TaskImpl>(I);
 
 impl<I: TaskImpl> Task<I> {
     /// Cancel the task, returning data if it was already finished
+    ///
+    /// This gives up the underlying task, so the `Task` has nothing left to wait for: see the
+    /// type-level docs for what awaiting it afterwards does.
     pub async fn cancel(&mut self) -> Option<<Self as Future>::Output> {
         self.0.cancel().await
     }

@@ -15,6 +15,7 @@ pub type AGERuntime = Runtime<RuntimeParts<AsyncGlobalExecutor, AsyncIO>>;
 #[cfg(feature = "async-io")]
 impl AGERuntime {
     /// Create a new AGERuntime
+    #[must_use]
     pub fn async_global_executor() -> Self {
         Self::new(RuntimeParts::new(AsyncGlobalExecutor, AsyncIO))
     }
@@ -76,10 +77,13 @@ mod task {
         type Output = T;
 
         fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-            match self.0.as_mut() {
-                None => Poll::Pending,
-                Some(task) => Pin::new(task).poll(cx),
-            }
+            // async-task propagates a panicking task on its own; all we have to add is not
+            // stalling forever once the task has been taken away by cancel or detach.
+            let task = self
+                .0
+                .as_mut()
+                .expect("Task polled after it was canceled or completed");
+            Pin::new(task).poll(cx)
         }
     }
 }

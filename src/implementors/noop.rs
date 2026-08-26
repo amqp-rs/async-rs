@@ -39,7 +39,7 @@ impl NoopRuntime {
 ///
 /// The [`Reactor`] side resolves under any executor, not just [`Executor::block_on`], but only as
 /// far as handing something back: `sleep` completes immediately, and `tcp_connect_addr` hands over
-/// a [`DummyIO`](crate::util::DummyIO) without having connected to anything. Using it is where the
+/// a [`DummyIO`] without having connected to anything. Using it is where the
 /// waiting starts again — every read, write, flush and close on a `DummyIO`, and every item of the
 /// stream `interval` returns, is `Poll::Pending` forever, and no waker is ever registered, so the
 /// executor cannot even be woken to cancel the task waiting on one.

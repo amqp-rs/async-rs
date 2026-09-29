@@ -66,7 +66,35 @@ const NO_RUNTIME: &str = "no tokio runtime: use Runtime::tokio() or Runtime::tok
 #[derive(Default, Clone, Debug)]
 pub struct Tokio {
     handle: Option<Handle>,
-    runtime: Option<Arc<TokioRT>>,
+    runtime: Option<Arc<OwnedRuntime>>,
+}
+
+/// Shut down the owned runtime without blocking if its last owner is in a tokio context.
+///
+/// Tokio panics when a runtime is dropped from an async worker, which can happen when a cloned
+/// `Tokio` is moved into one of its own tasks. Keeping this guard inside the `Arc` also covers
+/// replacing an owned runtime with `with_runtime`.
+#[derive(Debug)]
+struct OwnedRuntime(Option<TokioRT>);
+
+impl OwnedRuntime {
+    fn get(&self) -> &TokioRT {
+        self.0
+            .as_ref()
+            .expect("owned runtime is available until drop")
+    }
+}
+
+impl Drop for OwnedRuntime {
+    fn drop(&mut self) {
+        if let Some(runtime) = self.0.take() {
+            if Handle::try_current().is_ok() {
+                runtime.shutdown_background();
+            } else {
+                drop(runtime);
+            }
+        }
+    }
 }
 
 impl Tokio {
@@ -86,7 +114,7 @@ impl Tokio {
     #[must_use]
     pub fn with_runtime(mut self, runtime: TokioRT) -> Self {
         let handle = runtime.handle().clone();
-        self.runtime = Some(Arc::new(runtime));
+        self.runtime = Some(Arc::new(OwnedRuntime(Some(runtime))));
         self.with_handle(handle)
     }
 
@@ -104,7 +132,7 @@ impl Tokio {
     fn bound_handle(&self) -> Option<&Handle> {
         self.runtime
             .as_ref()
-            .map(|r| r.handle())
+            .map(|r| r.get().handle())
             .or(self.handle.as_ref())
     }
 
@@ -149,7 +177,7 @@ impl Executor for Tokio {
 
     fn block_on<T, F: Future<Output = T>>(&self, f: F) -> T {
         if let Some(runtime) = self.runtime.as_ref() {
-            runtime.block_on(f)
+            runtime.get().block_on(f)
         } else {
             // handle() already falls back to the ambient runtime, so there is nowhere left to
             // look once it comes back empty.
@@ -475,6 +503,27 @@ mod tests {
             res.expect_err("task panic").downcast_ref::<&str>(),
             Some(&"boom")
         );
+    }
+
+    #[test]
+    fn last_owned_runtime_can_be_dropped_from_its_worker() {
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        let (done_tx, done_rx) = std::sync::mpsc::channel();
+        let runtime = Runtime::tokio().unwrap();
+        let last_owner = runtime.clone();
+
+        // Keep the worker inside its task until the caller has dropped its own reference, so
+        // this worker really is the last owner when it releases the runtime.
+        drop(runtime.spawn(async move {
+            release_rx.recv().unwrap();
+            let dropped = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                drop(last_owner);
+            }));
+            done_tx.send(dropped.is_ok()).unwrap();
+        }));
+        drop(runtime);
+        release_tx.send(()).unwrap();
+        assert!(done_rx.recv_timeout(Duration::from_secs(10)).unwrap());
     }
 
     // The returned future must carry its tokio context with it: RuntimeParts pairs this reactor

@@ -29,7 +29,7 @@ impl Reactor for AsyncIO {
     }
 
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static {
-        Timer::interval(dur)
+        Timer::interval_at(Instant::now(), dur)
     }
 
     fn tcp_connect_addr(

@@ -38,7 +38,9 @@ pub trait Reactor {
     where
         Self: Sized;
 
-    /// Stream that yields at every given interval
+    /// Stream that yields immediately, then at every given interval
+    ///
+    /// The noop reactor never yields an item.
     fn interval(&self, dur: Duration) -> impl Stream<Item = Instant> + Send + 'static
     where
         Self: Sized;

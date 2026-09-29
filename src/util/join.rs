@@ -20,9 +20,9 @@ pub fn join<A: Future, B: Future>(a: A, b: B) -> Join<A, B> {
 /// Drive two fallible futures concurrently, short-circuiting on the first error.
 ///
 /// On the first `Err`, that error is returned without polling the other future again; otherwise
-/// both `Ok` values are returned once both complete. Useful for "run these two halves until one of
-/// them fails, then tear both down": the unfinished half is cancelled when the caller drops the
-/// [`TryJoin`], which is what dropping this future on the spot amounts to.
+/// both `Ok` values are returned once both complete. The unfinished future is dropped with
+/// [`TryJoin`]. A spawned [`Task`](crate::util::Task) detaches when dropped, so it keeps running;
+/// cancel such a task explicitly if it must stop when the other branch fails.
 pub fn try_join<T1, T2, E, A, B>(a: A, b: B) -> TryJoin<A, B>
 where
     A: Future<Output = Result<T1, E>>,
@@ -151,8 +151,8 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
 
-        // Poll both, short-circuiting the moment one completes with an error (which drops — cancels
-        // — the other when `this` is dropped by the caller).
+        // Poll both, short-circuiting the moment one completes with an error. The other future is
+        // dropped with `this`; whether that stops its work depends on the future's drop behavior.
         if let Some(err) = this.a.poll_err(cx) {
             return Poll::Ready(Err(err));
         }

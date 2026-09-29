@@ -1,54 +1,64 @@
 use async_rs::{Runtime, TokioRuntime, traits::*};
 use futures_io::{AsyncRead, AsyncWrite};
 use std::{
-    io,
-    net::TcpListener,
+    future::poll_fn,
+    io::{self, ErrorKind},
+    net::{SocketAddr, TcpListener},
     pin::Pin,
-    task::{Context, Poll, Waker},
 };
 
+const MESSAGE: &[u8] = b"Hello, world!";
+
 async fn listener(rt: &TokioRuntime) -> io::Result<TcpListener> {
-    rt.spawn_blocking(|| TcpListener::bind(("127.0.0.1", 7654)))
+    rt.spawn_blocking(|| TcpListener::bind(("127.0.0.1", 0)))
         .await
 }
 
-async fn sender(rt: &TokioRuntime) -> io::Result<impl AsyncRead + AsyncWrite + Send + 'static> {
-    rt.tcp_connect(([127, 0, 0, 1], 7654)).await
+async fn sender(rt: &TokioRuntime, addr: SocketAddr) -> io::Result<impl AsyncWrite + Send + Unpin> {
+    rt.tcp_connect(addr).await
 }
 
-fn send(mut stream: impl AsyncRead + AsyncWrite + Unpin) -> io::Result<()> {
-    let mut context = Context::from_waker(Waker::noop());
-    match Pin::new(&mut stream).poll_write(&mut context, b"Hello, world!") {
-        Poll::Pending => panic!("Could not write"),
-        Poll::Ready(res) => assert_eq!(res?, 13),
-    };
-    match Pin::new(&mut stream).poll_flush(&mut context) {
-        Poll::Pending => panic!("Could not flush"),
-        Poll::Ready(res) => res,
+async fn send(mut stream: impl AsyncWrite + Unpin) -> io::Result<()> {
+    let mut remaining = MESSAGE;
+    while !remaining.is_empty() {
+        let written = poll_fn(|cx| Pin::new(&mut stream).poll_write(cx, remaining)).await?;
+        if written == 0 {
+            return Err(ErrorKind::WriteZero.into());
+        }
+        remaining = &remaining[written..];
     }
+    poll_fn(|cx| Pin::new(&mut stream).poll_flush(cx)).await
+}
+
+async fn receive(mut stream: impl AsyncRead + Unpin, buf: &mut [u8]) -> io::Result<()> {
+    let mut read = 0;
+    while read < buf.len() {
+        let count = poll_fn(|cx| Pin::new(&mut stream).poll_read(cx, &mut buf[read..])).await?;
+        if count == 0 {
+            return Err(ErrorKind::UnexpectedEof.into());
+        }
+        read += count;
+    }
+    Ok(())
 }
 
 async fn tokio_main(rt: &TokioRuntime) -> io::Result<()> {
     let listener = listener(rt).await?;
-    let sender = sender(rt).await?;
+    let sender = sender(rt, listener.local_addr()?).await?;
     let stream = rt
         .spawn_blocking(move || {
-            let stream = listener.incoming().next().unwrap()?;
+            let (stream, _) = listener.accept()?;
             // The tokio reactor takes this as given rather than doing it itself: a blocking socket
             // would block the executor thread inside the read instead of reporting WouldBlock.
             stream.set_nonblocking(true)?;
             io::Result::Ok(stream)
         })
         .await?;
-    let mut stream = rt.register(stream)?;
-    let mut buf = vec![0u8; 13];
-    let mut context = Context::from_waker(Waker::noop());
-    send(sender)?;
-    match Pin::new(&mut stream).poll_read(&mut context, &mut buf[..]) {
-        Poll::Pending => panic!("Could not read"),
-        Poll::Ready(res) => assert_eq!(res?, 13),
-    };
-    assert_eq!(String::from_utf8(buf).unwrap().as_str(), "Hello, world!");
+    let stream = rt.register(stream)?;
+    let mut buf = [0u8; MESSAGE.len()];
+    send(sender).await?;
+    receive(stream, &mut buf).await?;
+    assert_eq!(&buf, MESSAGE);
     Ok(())
 }
 

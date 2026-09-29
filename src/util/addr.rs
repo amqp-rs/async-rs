@@ -10,8 +10,7 @@ use std::{
 /// Wrapper to impl AsyncToSocketAddrs from an IntoIterator<Item = SocketAddr>
 pub struct SocketAddrs<I: IntoIterator<Item = SocketAddr> + Send + 'static>(pub I);
 
-impl<I: IntoIterator<Item = SocketAddr> + Send + fmt::Debug + 'static> AsyncToSocketAddrs
-    for SocketAddrs<I>
+impl<I: IntoIterator<Item = SocketAddr> + Send + 'static> AsyncToSocketAddrs for SocketAddrs<I>
 where
     I::IntoIter: Send + 'static,
 {

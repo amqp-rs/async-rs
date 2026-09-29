@@ -9,11 +9,11 @@
 
 //! A Rust async runtime abstraction library.
 //!
-//! Provides a unified [`Runtime`] type and a set of [`traits`]
-//! (`Executor`, `Reactor`, `Dns`, …) that abstract over Tokio, smol, and
-//! async-global-executor. Applications select exactly one runtime via feature
-//! flags; library crates depend on the trait objects and remain
-//! runtime-agnostic.
+//! Provides a unified [`Runtime`] type and [`traits`] such as [`Executor`](traits::Executor),
+//! [`Reactor`](traits::Reactor), and [`AsyncToSocketAddrs`](traits::AsyncToSocketAddrs) that
+//! abstract over Tokio, smol, and async-global-executor. Features enable implementations and may
+//! be combined. Applications choose a runtime when constructing [`Runtime`]; library crates can
+//! use generic trait bounds to remain runtime-agnostic.
 //!
 //! # Feature flags
 //!
@@ -21,9 +21,11 @@
 //! |------|-------|
 //! | `tokio` *(default)* | Tokio runtime |
 //! | `smol` | smol executor |
-//! | `async-global-executor` | async-global-executor |
+//! | `async-global-executor` | Executor; combine with `async-io` for `AGERuntime` |
 //! | `async-io` | async-io reactor (required by `smol`) |
 //! | `hickory-dns` | Hickory DNS resolver (tokio only) |
+//!
+//! [`NoopRuntime`] is always available without a feature flag.
 //!
 //! # Example
 //!

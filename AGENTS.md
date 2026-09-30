@@ -55,7 +55,7 @@ An *unbound* kit falls back to the ambient runtime, and when that fallback happe
 
 Whichever way a runtime turns out to be missing, the message is `NO_RUNTIME`: the entry points returning an `io::Result` report it, the rest panic with it, and none of them let tokio's own "there is no reactor running" out.
 
-An owned tokio runtime is held by `OwnedRuntime`. Its final drop uses `shutdown_background` in a tokio context, avoiding tokio's panic on dropping a runtime from an async worker; outside such a context it uses normal shutdown. Active reactors yield the first `interval` tick immediately, while `Noop` never yields one.
+An owned tokio runtime is held by `OwnedRuntime`. Its final drop uses `shutdown_background` whenever a Tokio handle is current, avoiding tokio's panic on dropping a runtime from an async worker. This also includes a plain `Handle::enter()` scope, so the final drop may return before blocking tasks finish. On a plain thread, leave that scope before dropping the final owner, or call `TokioRuntime::shutdown_blocking()` with no other clones, if it must wait for blocking work. The explicit method returns the runtime unchanged when called from a Tokio task, including `spawn_blocking`, since waiting on its own blocking worker would deadlock. Call it from an ordinary thread, not a runtime worker or an active async executor. With no current Tokio handle, drop uses normal shutdown. Active reactors yield the first `interval` tick immediately, while `Noop` never yields one.
 
 ### Task lifecycle
 
@@ -68,7 +68,7 @@ Awaiting a `Task` yields its output, which leaves no room to report a failure, s
 ### Key patterns
 
 - **Deref forwarding**: `Executor` and `Reactor` are auto-implemented for `Deref` targets, so `Arc<Runtime>`, `&Runtime`, etc. all work without extra boilerplate.
-- **Feature-gated implementations**: each runtime is behind an optional feature; `default = ["tokio"]`.
+- **Feature-gated implementations**: Tokio, smol, async-io, and async-global-executor need features; `Noop` is always available. The default feature is `tokio`.
 - **async-compat**: the tokio implementor wraps `TcpStream` in `async-compat` to satisfy `futures-io` trait bounds.
 - **Platform-specific I/O** (`src/sys/`): `AsSysFd` covers Unix file descriptors and Windows sockets. Tokio's `register` supports Unix; the async-io reactor also supports Windows sockets.
 - **Address traits**: sealed helper traits restrict the blanket `AsyncToSocketAddrs` implementations, while downstream types can implement `AsyncToSocketAddrs` directly.

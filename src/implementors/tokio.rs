@@ -53,6 +53,25 @@ impl TokioRuntime {
     pub fn tokio_with_runtime(runtime: TokioRT) -> Self {
         Self::new(Tokio::default().with_runtime(runtime))
     }
+
+    /// Shut down the owned Tokio runtime, waiting for its blocking tasks to finish.
+    ///
+    /// Returns the runtime unchanged if another clone still owns it or this is called from a
+    /// Tokio task, including a `spawn_blocking` task. A runtime bound only to a handle has no
+    /// owned runtime to shut down and returns `Ok(())`.
+    ///
+    /// Unlike dropping the last owner, this waits even if a Tokio handle was entered on a plain
+    /// thread. Call it from an ordinary thread, not from a runtime worker or an active async
+    /// executor.
+    ///
+    /// # Panics
+    ///
+    /// Tokio panics if a runtime is shut down with a blocking wait inside an async executor
+    /// without a Tokio task ID, such as a top-level `Handle::block_on` call. Calls from Tokio
+    /// tasks instead return `Err(self)`.
+    pub fn shutdown_blocking(self) -> Result<(), Self> {
+        self.kit.shutdown_blocking().map_err(Self::new)
+    }
 }
 
 /// What every entry point says when it cannot find a runtime to work with.
@@ -69,11 +88,12 @@ pub struct Tokio {
     runtime: Option<Arc<OwnedRuntime>>,
 }
 
-/// Shut down the owned runtime without blocking if its last owner is in a tokio context.
+/// Shut down the owned runtime without blocking if its last owner has entered a tokio handle.
 ///
 /// Tokio panics when a runtime is dropped from an async worker, which can happen when a cloned
 /// `Tokio` is moved into one of its own tasks. Keeping this guard inside the `Arc` also covers
-/// replacing an owned runtime with `with_runtime`.
+/// replacing an owned runtime with `with_runtime`. An entered handle alone does not mean the
+/// thread is driving async work, so this also skips waiting in a plain `Handle::enter()` scope.
 #[derive(Debug)]
 struct OwnedRuntime(Option<TokioRT>);
 
@@ -98,6 +118,27 @@ impl Drop for OwnedRuntime {
 }
 
 impl Tokio {
+    pub(crate) fn shutdown_blocking(mut self) -> Result<(), Self> {
+        // A blocking task belongs to its runtime's blocking pool. Waiting for that pool from
+        // the task itself would deadlock, so reject all Tokio tasks conservatively.
+        if self.runtime.is_some() && tokio::task::try_id().is_some() {
+            return Err(self);
+        }
+        let Some(runtime) = self.runtime.take() else {
+            return Ok(());
+        };
+        match Arc::try_unwrap(runtime) {
+            Ok(mut runtime) => {
+                drop(runtime.0.take());
+                Ok(())
+            }
+            Err(runtime) => {
+                self.runtime = Some(runtime);
+                Err(self)
+            }
+        }
+    }
+
     /// Bind to the tokio Runtime associated to this handle by default.
     ///
     /// A runtime given to [`with_runtime`](Self::with_runtime) wins over this one whichever order
@@ -271,11 +312,8 @@ impl Reactor for Tokio {
 /// `EnterGuard` is not `Send`, and keeping one in the future's state would make the whole future
 /// `!Send`.
 ///
-/// Only the handle is kept, deliberately: holding the kit's `Arc<TokioRT>` to keep the runtime
-/// alive would let this future become its last owner, and dropping a tokio `Runtime` from an
-/// async context panics outright, so a connect future dropped on a worker thread of that same
-/// runtime would blow up far from the cause. Entering a runtime which has since shut down merely
-/// fails the connect, which is the better of the two.
+/// Only the handle is kept so a pending connection does not extend the owned runtime's lifetime
+/// after the caller drops the kit. Polling it after shutdown may then fail to connect.
 struct InTokioContext<F: Future> {
     handle: Option<Handle>,
     // Boxed to get a stable address without hand-rolling a pin projection, as util::join does.
@@ -524,6 +562,74 @@ mod tests {
         drop(runtime);
         release_tx.send(()).unwrap();
         assert!(done_rx.recv_timeout(Duration::from_secs(10)).unwrap());
+    }
+
+    #[test]
+    fn explicit_shutdown_waits_with_a_foreign_handle_entered() {
+        let runtime = Runtime::tokio().unwrap();
+        let (started_tx, started_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        let (done_tx, done_rx) = std::sync::mpsc::channel();
+
+        drop(runtime.spawn_blocking(move || {
+            started_tx.send(()).unwrap();
+            release_rx.recv().unwrap();
+            done_tx.send(()).unwrap();
+        }));
+        started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+
+        let (shutdown_started_tx, shutdown_started_rx) = std::sync::mpsc::channel();
+        let (shutdown_done_tx, shutdown_done_rx) = std::sync::mpsc::channel();
+        let shutdown_thread = std::thread::spawn(move || {
+            let ambient = TokioRT::new().unwrap();
+            let _enter = ambient.enter();
+            shutdown_started_tx.send(()).unwrap();
+            runtime.shutdown_blocking().unwrap();
+            shutdown_done_tx.send(()).unwrap();
+        });
+        shutdown_started_rx
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap();
+        let premature = shutdown_done_rx.recv_timeout(Duration::from_millis(100));
+        release_tx.send(()).unwrap();
+        assert!(matches!(
+            premature,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+        ));
+        shutdown_done_rx
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap();
+        shutdown_thread.join().unwrap();
+        assert!(done_rx.try_recv().is_ok());
+    }
+
+    #[test]
+    fn explicit_shutdown_refuses_its_own_blocking_task() {
+        let runtime = Runtime::tokio().unwrap();
+        let last_owner = runtime.clone();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        let (result_tx, result_rx) = std::sync::mpsc::channel();
+
+        drop(runtime.spawn_blocking(move || {
+            release_rx.recv().unwrap();
+            result_tx.send(last_owner.shutdown_blocking()).unwrap();
+        }));
+        drop(runtime);
+        release_tx.send(()).unwrap();
+        let runtime = result_rx
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .unwrap_err();
+        runtime.shutdown_blocking().unwrap();
+    }
+
+    #[test]
+    fn explicit_shutdown_requires_last_owner() {
+        let runtime = Runtime::tokio().unwrap();
+        let other_owner = runtime.clone();
+        let runtime = runtime.shutdown_blocking().unwrap_err();
+        drop(other_owner);
+        runtime.shutdown_blocking().unwrap();
     }
 
     // The returned future must carry its tokio context with it: RuntimeParts pairs this reactor

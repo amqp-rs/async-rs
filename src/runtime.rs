@@ -22,7 +22,7 @@ use std::{
 /// provided for each built-in backend and are the usual entry points.
 #[derive(Clone, Debug)]
 pub struct Runtime<RK: RuntimeKit> {
-    kit: RK,
+    pub(crate) kit: RK,
 }
 
 impl<RK: RuntimeKit> Runtime<RK> {

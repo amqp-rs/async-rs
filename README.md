@@ -28,6 +28,14 @@ bounds to remain runtime-agnostic.
 
 `NoopRuntime` is always available without a feature flag.
 
+An owned Tokio runtime uses nonblocking shutdown when its final owner is dropped while a Tokio
+handle is current. This includes a plain `Handle::enter()` scope, so `spawn_blocking` work can
+continue after the drop returns. Await work that must finish before dropping the final owner. On a
+plain thread, leave the `Handle::enter()` scope first or call `shutdown_blocking()` to wait. The
+method returns the runtime if another clone still owns it or it is called from a Tokio task,
+including a `spawn_blocking` task. Call it from an ordinary thread, not a runtime worker or an
+active async executor.
+
 ## Example
 
 ```rust
